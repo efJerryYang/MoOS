@@ -12,9 +12,10 @@ OBJDUMP := rust-objdump --arch-name=riscv64
 OBJCOPY := rust-objcopy --binary-architecture=riscv64
 
 binary:
-	$(OBJCOPY) $(ELF) --strip-all -O binary $(patsubst $(TARGET_DIR)/%, $(TARGET_DIR)/%.bin, $(ELF))
+	$(OBJCOPY)  $(ELF) --strip-all -O binary $(patsubst $(TARGET_DIR)/%, $(TARGET_DIR)/%.bin, $(ELF))
+	# $(OBJDUMP) -D $(ELF) > $(TARGET_DIR)/os.asm
 
-build: 
+build: binary
 	cargo build --release
 
 run: build binary
