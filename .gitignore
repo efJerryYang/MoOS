@@ -1,3 +1,4 @@
 os/kernel/target
 os/user
 os/user_c/build
+.vscode
