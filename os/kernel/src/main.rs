@@ -6,24 +6,40 @@ mod sbi;
 mod console;
 
 use core::{arch::global_asm, str::Bytes};
-use crate::sbi::{console_putchar, console_getchar, shutdown};
+use crate::{sbi::{console_putchar, console_getchar, shutdown}, console::print};
+use xmas_elf::ElfFile;
 
 global_asm!(include_str!("entry.asm"));
-global_asm!(include_str!("user_bin.S"));
-
 
 unsafe fn test_userbin(){
-	extern "C"{
-		fn userbin_start();
-	}
-	print!("\n");
-	let pointer = userbin_start as usize as *const u8;
-	for y in 0..600{
-		for x in 0..16{
-			print!("{:02x} ",*(pointer.add(y*16+x)));
-		}
-		print!("\n")
-	}
+	let userbin=include_bytes!("../../user_c/build/main");
+
+	// for y in 0..600{
+	// 	for x in 0..16{
+	// 		print!("{:02x} ",userbin[y*16+x]);
+	// 	}
+	// 	print!("\n")
+	// }
+	// let mut buffer=Vec::new();
+	let elf_file=ElfFile::new(userbin).unwrap();
+	print!("getting:");
+	let x=elf_file.find_section_by_name(".text").unwrap().offset();
+	print!("offset:{:#x}\n",x);
+
+	// print!("\n");
+	// let pointer = userbin_start as usize as *mut u8;
+	// let endpos=userbin_end as usize as *mut u8;
+
+	// while pointer!=endpos{
+	// 	print!("{:02x} ",*(pointer));
+	// 	pointer.add(1);
+	// }
+	// for y in 0..600{
+	// 	for x in 0..16{
+	// 		print!("{:02x} ",*(pointer.add(16*y+x)));
+	// 	}
+	// 	print!("\n")
+	// }
 	print!("\n");
 }
 
@@ -38,9 +54,7 @@ pub fn rust_main() -> !{
 			unsafe{
 				test_userbin();
 			}
-			// print!("\n");
-			// print!("Hello! This is fake shell speaking.");
-			// print!("\n");
+			// print!("\nHello! This is fake shell speaking.\n");
 		}else{
 			print!("{}",c);
 		}
