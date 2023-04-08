@@ -15,11 +15,12 @@ global_asm!(include_str!("entry.asm"));
 pub fn rust_main() -> !{
 	clear_bss();
 	println!("Shell Started!");
-    
     loop{
 		let c:char;
 		c=console_getchar() as u8 as char;
 		if c as u8 == 13{
+			print!("\n");
+			print!("Hello! This is fake shell speaking.");
 			print!("\n");
 		}else{
 			print!("{}",c);
