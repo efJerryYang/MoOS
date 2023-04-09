@@ -21,6 +21,8 @@ void putstr(char* c){
 	}
 }
 
+int uni,posda;
+char* c;
 
 int plus(int a,int b){
 	return a+b;

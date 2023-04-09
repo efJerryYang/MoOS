@@ -26,10 +26,6 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
 				*buf=console_getchar() as u8;
 			}
 			return 0;
-            // let slice = unsafe { core::slice::from_raw_parts(buf, len) };
-            // let str = core::str::from_utf8(slice).unwrap();
-            // print!("{}", str);
-            // len as isize
         }
         _ => {
             panic!("Unsupported fd in sys_read!");

@@ -67,15 +67,21 @@ unsafe fn test_userbin(){
 	asm!("fence.i");
 	let text=elf_file.find_section_by_name(".text").unwrap();
 	let data=elf_file.find_section_by_name(".data").unwrap();
-	let sections=[text,data];
-	
-	for sec in sections{
+	let bss=elf_file.find_section_by_name(".bss").unwrap();
+
+	let copylist=[text,data];
+	for sec in copylist{
 		let src=core::slice::from_raw_parts((userbin as *const u8).add(sec.offset() as usize) , sec.size() as usize);
 		let dst=core::slice::from_raw_parts_mut(sec.address() as *mut u8, sec.size() as usize);
 
 		dst.copy_from_slice(src);
 	}
-	
+
+	(bss.address() as usize..bss.address() as usize+bss.size() as usize).for_each(|a| {
+        (a as *mut u8).write_volatile(0)
+    });
+
+
 	println!("");
 	println!("entry:{:#x}",elf_file.header.pt2.entry_point());
 

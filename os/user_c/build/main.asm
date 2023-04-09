@@ -91,7 +91,7 @@ Disassembly of section .text:
     804000b8:	e822                	sd	s0,16(sp)
     804000ba:	1000                	addi	s0,sp,32
     804000bc:	00001517          	auipc	a0,0x1
-    804000c0:	9ac50513          	addi	a0,a0,-1620 # 80400a68 <b+0x4>
+    804000c0:	9bc50513          	addi	a0,a0,-1604 # 80400a78 <b+0x4>
     804000c4:	f8bff0ef          	jal	ra,8040004e <_Z6putstrPc>
     804000c8:	f3bff0ef          	jal	ra,80400002 <_Z7getcharv>
     804000cc:	87aa                	mv	a5,a0
@@ -101,7 +101,7 @@ Disassembly of section .text:
     804000da:	47b5                	li	a5,13
     804000dc:	00f71963          	bne	a4,a5,804000ee <main+0x3a>
     804000e0:	00001517          	auipc	a0,0x1
-    804000e4:	9a050513          	addi	a0,a0,-1632 # 80400a80 <b+0x1c>
+    804000e4:	9b050513          	addi	a0,a0,-1616 # 80400a90 <b+0x1c>
     804000e8:	f67ff0ef          	jal	ra,8040004e <_Z6putstrPc>
     804000ec:	bff1                	j	804000c8 <main+0x14>
     804000ee:	fef44783          	lbu	a5,-17(s0)
@@ -1067,14 +1067,15 @@ Disassembly of section .note.gnu.build-id:
     804009de:	0000                	unimp
     804009e0:	00000003          	lb	zero,0(zero) # 0 <BASE_ADDRESS-0x80400000>
     804009e4:	00554e47          	fmsub.s	ft8,fa0,ft5,ft0,rmm
-    804009e8:	b1a6                	fsd	fs1,224(sp)
-    804009ea:	52e6                	lw	t0,120(sp)
-    804009ec:	871c                	.2byte	0x871c
-    804009ee:	b53a                	fsd	fa4,168(sp)
-    804009f0:	35a4a3e3          	.4byte	0x35a4a3e3
-    804009f4:	ea9e                	sd	t2,336(sp)
-    804009f6:	04b4                	addi	a3,sp,584
-    804009f8:	8562fe27          	.4byte	0x8562fe27
+    804009e8:	e27453c7          	fmsub.d	ft7,fs0,ft7,ft8,unknown
+    804009ec:	4a14                	lw	a3,16(a2)
+    804009ee:	a68a                	fsd	ft2,328(sp)
+    804009f0:	c2ce                	sw	s3,68(sp)
+    804009f2:	62ea                	ld	t0,152(sp)
+    804009f4:	a3a1                	j	80400f3c <_GLOBAL_OFFSET_TABLE_+0x35c>
+    804009f6:	770e                	ld	a4,224(sp)
+    804009f8:	5879                	li	a6,-2
+    804009fa:	ff2e                	sd	a1,440(sp)
 
 Disassembly of section .dynsym:
 
@@ -1100,136 +1101,149 @@ Disassembly of section .gnu.hash:
     80400a40:	0001                	nop
 	...
 
-Disassembly of section .data:
+Disassembly of section .bss:
 
-0000000080400a58 <nuclear>:
-    80400a58:	7566                	ld	a0,120(sp)
-    80400a5a:	6e6f6973          	csrrsi	s2,0x6e6,30
-    80400a5e:	000a                	c.slli	zero,0x2
-
-0000000080400a60 <a>:
-    80400a60:	0009                	c.nop	2
+0000000080400a58 <uni>:
+    80400a58:	0000                	unimp
 	...
 
-0000000080400a64 <b>:
-    80400a64:	00000003          	lb	zero,0(zero) # 0 <BASE_ADDRESS-0x80400000>
-    80400a68:	6572                	ld	a0,280(sp)
-    80400a6a:	6c61                	lui	s8,0x18
-    80400a6c:	7320                	ld	s0,96(a4)
-    80400a6e:	6568                	ld	a0,200(a0)
-    80400a70:	6c6c                	ld	a1,216(s0)
-    80400a72:	7320                	ld	s0,96(a4)
-    80400a74:	6174                	ld	a3,192(a0)
-    80400a76:	6572                	ld	a0,280(sp)
-    80400a78:	2164                	fld	fs1,192(a0)
-    80400a7a:	000a                	c.slli	zero,0x2
-    80400a7c:	0000                	unimp
-    80400a7e:	0000                	unimp
-    80400a80:	480a                	lw	a6,128(sp)
-    80400a82:	6c65                	lui	s8,0x19
-    80400a84:	6f6c                	ld	a1,216(a4)
-    80400a86:	2021                	.2byte	0x2021
-    80400a88:	6552                	ld	a0,272(sp)
-    80400a8a:	6c61                	lui	s8,0x18
-    80400a8c:	5320                	lw	s0,96(a4)
-    80400a8e:	6568                	ld	a0,200(a0)
-    80400a90:	6c6c                	ld	a1,216(s0)
-    80400a92:	7320                	ld	s0,96(a4)
-    80400a94:	6570                	ld	a2,200(a0)
-    80400a96:	6b61                	lui	s6,0x18
-    80400a98:	6e69                	lui	t3,0x1a
-    80400a9a:	49202167          	.4byte	0x49202167
-    80400a9e:	6e206d27          	.4byte	0x6e206d27
-    80400aa2:	7720776f          	jal	a4,80408214 <_GLOBAL_OFFSET_TABLE_+0x7644>
-    80400aa6:	696b726f          	jal	tp,804b813c <_GLOBAL_OFFSET_TABLE_+0xb756c>
-    80400aaa:	676e                	ld	a4,216(sp)
-    80400aac:	6920                	ld	s0,80(a0)
-    80400aae:	206e                	fld	ft0,216(sp)
-    80400ab0:	7375                	lui	t1,0xffffd
-    80400ab2:	7265                	lui	tp,0xffff9
-    80400ab4:	6d20                	ld	s0,88(a0)
-    80400ab6:	2e65646f          	jal	s0,80456d9c <_GLOBAL_OFFSET_TABLE_+0x561cc>
-    80400aba:	000a                	c.slli	zero,0x2
+0000000080400a5c <posda>:
+    80400a5c:	0000                	unimp
+	...
+
+0000000080400a60 <c>:
+	...
+
+Disassembly of section .data:
+
+0000000080400a68 <nuclear>:
+    80400a68:	7566                	ld	a0,120(sp)
+    80400a6a:	6e6f6973          	csrrsi	s2,0x6e6,30
+    80400a6e:	000a                	c.slli	zero,0x2
+
+0000000080400a70 <a>:
+    80400a70:	0009                	c.nop	2
+	...
+
+0000000080400a74 <b>:
+    80400a74:	00000003          	lb	zero,0(zero) # 0 <BASE_ADDRESS-0x80400000>
+    80400a78:	6572                	ld	a0,280(sp)
+    80400a7a:	6c61                	lui	s8,0x18
+    80400a7c:	7320                	ld	s0,96(a4)
+    80400a7e:	6568                	ld	a0,200(a0)
+    80400a80:	6c6c                	ld	a1,216(s0)
+    80400a82:	7320                	ld	s0,96(a4)
+    80400a84:	6174                	ld	a3,192(a0)
+    80400a86:	6572                	ld	a0,280(sp)
+    80400a88:	2164                	fld	fs1,192(a0)
+    80400a8a:	000a                	c.slli	zero,0x2
+    80400a8c:	0000                	unimp
+    80400a8e:	0000                	unimp
+    80400a90:	480a                	lw	a6,128(sp)
+    80400a92:	6c65                	lui	s8,0x19
+    80400a94:	6f6c                	ld	a1,216(a4)
+    80400a96:	2021                	.2byte	0x2021
+    80400a98:	6552                	ld	a0,272(sp)
+    80400a9a:	6c61                	lui	s8,0x18
+    80400a9c:	5320                	lw	s0,96(a4)
+    80400a9e:	6568                	ld	a0,200(a0)
+    80400aa0:	6c6c                	ld	a1,216(s0)
+    80400aa2:	7320                	ld	s0,96(a4)
+    80400aa4:	6570                	ld	a2,200(a0)
+    80400aa6:	6b61                	lui	s6,0x18
+    80400aa8:	6e69                	lui	t3,0x1a
+    80400aaa:	49202167          	.4byte	0x49202167
+    80400aae:	6e206d27          	.4byte	0x6e206d27
+    80400ab2:	7720776f          	jal	a4,80408224 <_GLOBAL_OFFSET_TABLE_+0x7644>
+    80400ab6:	696b726f          	jal	tp,804b814c <_GLOBAL_OFFSET_TABLE_+0xb756c>
+    80400aba:	676e                	ld	a4,216(sp)
+    80400abc:	6920                	ld	s0,80(a0)
+    80400abe:	206e                	fld	ft0,216(sp)
+    80400ac0:	7375                	lui	t1,0xffffd
+    80400ac2:	7265                	lui	tp,0xffff9
+    80400ac4:	6d20                	ld	s0,88(a0)
+    80400ac6:	2e65646f          	jal	s0,80456dac <_GLOBAL_OFFSET_TABLE_+0x561cc>
+    80400aca:	000a                	c.slli	zero,0x2
 
 Disassembly of section .dynamic:
 
-0000000080400ac0 <.dynamic>:
-    80400ac0:	fef5                	bnez	a3,80400abc <b+0x58>
-    80400ac2:	6fff                	.2byte	0x6fff
-    80400ac4:	0000                	unimp
-    80400ac6:	0000                	unimp
-    80400ac8:	0a38                	addi	a4,sp,280
-    80400aca:	8040                	.2byte	0x8040
-    80400acc:	0000                	unimp
-    80400ace:	0000                	unimp
-    80400ad0:	0005                	c.nop	1
-    80400ad2:	0000                	unimp
+0000000080400ad0 <.dynamic>:
+    80400ad0:	fef5                	bnez	a3,80400acc <b+0x58>
+    80400ad2:	6fff                	.2byte	0x6fff
     80400ad4:	0000                	unimp
     80400ad6:	0000                	unimp
-    80400ad8:	0a30                	addi	a2,sp,280
+    80400ad8:	0a38                	addi	a4,sp,280
     80400ada:	8040                	.2byte	0x8040
     80400adc:	0000                	unimp
     80400ade:	0000                	unimp
-    80400ae0:	0006                	c.slli	zero,0x1
+    80400ae0:	0005                	c.nop	1
     80400ae2:	0000                	unimp
     80400ae4:	0000                	unimp
     80400ae6:	0000                	unimp
-    80400ae8:	0a00                	addi	s0,sp,272
+    80400ae8:	0a30                	addi	a2,sp,280
     80400aea:	8040                	.2byte	0x8040
     80400aec:	0000                	unimp
     80400aee:	0000                	unimp
-    80400af0:	000a                	c.slli	zero,0x2
+    80400af0:	0006                	c.slli	zero,0x1
     80400af2:	0000                	unimp
     80400af4:	0000                	unimp
     80400af6:	0000                	unimp
-    80400af8:	0001                	nop
-    80400afa:	0000                	unimp
+    80400af8:	0a00                	addi	s0,sp,272
+    80400afa:	8040                	.2byte	0x8040
     80400afc:	0000                	unimp
     80400afe:	0000                	unimp
-    80400b00:	0000000b          	.4byte	0xb
+    80400b00:	000a                	c.slli	zero,0x2
+    80400b02:	0000                	unimp
     80400b04:	0000                	unimp
     80400b06:	0000                	unimp
-    80400b08:	0018                	.2byte	0x18
+    80400b08:	0001                	nop
     80400b0a:	0000                	unimp
     80400b0c:	0000                	unimp
     80400b0e:	0000                	unimp
-    80400b10:	0015                	c.nop	5
-	...
+    80400b10:	0000000b          	.4byte	0xb
+    80400b14:	0000                	unimp
+    80400b16:	0000                	unimp
+    80400b18:	0018                	.2byte	0x18
+    80400b1a:	0000                	unimp
+    80400b1c:	0000                	unimp
     80400b1e:	0000                	unimp
-    80400b20:	00000007          	.4byte	0x7
+    80400b20:	0015                	c.nop	5
 	...
-    80400b30:	0008                	.2byte	0x8
+    80400b2e:	0000                	unimp
+    80400b30:	00000007          	.4byte	0x7
 	...
-    80400b3e:	0000                	unimp
-    80400b40:	0009                	c.nop	2
-    80400b42:	0000                	unimp
-    80400b44:	0000                	unimp
-    80400b46:	0000                	unimp
-    80400b48:	0018                	.2byte	0x18
-    80400b4a:	0000                	unimp
-    80400b4c:	0000                	unimp
+    80400b40:	0008                	.2byte	0x8
+	...
     80400b4e:	0000                	unimp
-    80400b50:	001e                	c.slli	zero,0x7
+    80400b50:	0009                	c.nop	2
     80400b52:	0000                	unimp
     80400b54:	0000                	unimp
     80400b56:	0000                	unimp
-    80400b58:	0008                	.2byte	0x8
+    80400b58:	0018                	.2byte	0x18
     80400b5a:	0000                	unimp
     80400b5c:	0000                	unimp
     80400b5e:	0000                	unimp
-    80400b60:	6ffffffb          	.4byte	0x6ffffffb
+    80400b60:	001e                	c.slli	zero,0x7
+    80400b62:	0000                	unimp
     80400b64:	0000                	unimp
     80400b66:	0000                	unimp
-    80400b68:	0001                	nop
-    80400b6a:	0800                	addi	s0,sp,16
+    80400b68:	0008                	.2byte	0x8
+    80400b6a:	0000                	unimp
+    80400b6c:	0000                	unimp
+    80400b6e:	0000                	unimp
+    80400b70:	6ffffffb          	.4byte	0x6ffffffb
+    80400b74:	0000                	unimp
+    80400b76:	0000                	unimp
+    80400b78:	0001                	nop
+    80400b7a:	0800                	addi	s0,sp,16
 	...
 
 Disassembly of section .got:
 
-0000000080400bd0 <.got>:
-    80400bd0:	0ac0                	addi	s0,sp,340
-    80400bd2:	8040                	.2byte	0x8040
-    80400bd4:	0000                	unimp
+0000000080400be0 <.got>:
+    80400be0:	0ad0                	addi	a2,sp,340
+    80400be2:	8040                	.2byte	0x8040
+    80400be4:	0000                	unimp
 	...
 
 Disassembly of section .comment:
@@ -1271,7 +1285,7 @@ Disassembly of section .riscv.attributes:
   14:	6934                	ld	a3,80(a0)
   16:	7032                	.2byte	0x7032
   18:	5f30                	lw	a2,120(a4)
-  1a:	326d                	addiw	tp,tp,-5 # fffffffffffe0ffb <_GLOBAL_OFFSET_TABLE_+0xffffffff7fbe042b>
+  1a:	326d                	addiw	tp,tp,-5 # fffffffffffe0ffb <_GLOBAL_OFFSET_TABLE_+0xffffffff7fbe041b>
   1c:	3070                	fld	fa2,224(s0)
   1e:	615f 7032 5f30      	.byte	0x5f, 0x61, 0x32, 0x70, 0x30, 0x5f
   24:	3266                	fld	ft4,120(sp)
