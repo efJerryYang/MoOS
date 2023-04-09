@@ -3,10 +3,6 @@
 #include "lib/stdio.c"
 #include "lib/string.c"
 char nuclear[]="fusion\n";
-int a=9,b=3;
-
-int uni,posda;
-char* c;
 
 int plus(int a,int b){
 	return a+b;
@@ -28,10 +24,6 @@ signed main(){
 		if(!strcmp(buf,"exit")) break;
 		printf("connot excute %s.\n",buf);
 	}
-	int c=3;
-	a++;//a=10
-	a=plus(a*c,b);//30+3=33
-	b=a*a;//33*33=990+99=1089
-	printf("b:%d\n",b);
-	return 0;
+	exit(-1);
+	// return 0;
 }

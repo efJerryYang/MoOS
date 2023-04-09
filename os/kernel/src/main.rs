@@ -64,7 +64,6 @@ unsafe fn test_userbin(){
 	let userbin=include_bytes!("../../user_c/build/main");
 	let elf_file=ElfFile::new(userbin).unwrap();
 
-	asm!("fence.i");
 	let text=elf_file.find_section_by_name(".text").unwrap();
 	let data=elf_file.find_section_by_name(".data").unwrap();
 	let bss=elf_file.find_section_by_name(".bss").unwrap();
@@ -73,31 +72,29 @@ unsafe fn test_userbin(){
 	for sec in copylist{
 		let src=core::slice::from_raw_parts((userbin as *const u8).add(sec.offset() as usize) , sec.size() as usize);
 		let dst=core::slice::from_raw_parts_mut(sec.address() as *mut u8, sec.size() as usize);
-
 		dst.copy_from_slice(src);
 	}
-
+	
 	(bss.address() as usize..bss.address() as usize+bss.size() as usize).for_each(|a| {
-        (a as *mut u8).write_volatile(0)
+		(a as *mut u8).write_volatile(0)
     });
-
-
+	
 	println!("");
 	println!("entry:{:#x}",elf_file.header.pt2.entry_point());
-
+	
 	extern "C" {
-        fn __restore(cx_addr: usize);
+		fn __restore(cx_addr: usize);
     }
 	// println!("userstack:{:#x}",USER_STACK.get_sp());
-
-
+	
+	
+	asm!("fence.i");
 	__restore(KERNEL_STACK.push_context(TrapContext::app_init_context(
 		elf_file.header.pt2.entry_point() as usize,
 		0x80700000
 		// USER_STACK.get_sp()
 	)) as *const _ as usize);
 
-	print!("\n");
 }
 
 #[no_mangle]
@@ -129,7 +126,8 @@ pub fn rust_main() -> !{
 	unsafe{
 		test_userbin();
 	}
-	panic!();
+	println!("unreachable part.");
+	loop{}
 }
 
 fn clear_bss() {

@@ -15,9 +15,11 @@ Compile user programs:
 
 # Progress:
 ## supported system calls:
-
-	read(int fd, char* buf, int len);
-	write(int fd, const char* buf, int len);
+``` C
+read(int fd, char* buf, int len);
+write(int fd, const char* buf, int len);
+exit(int code);
+```
 ## yet to do:
 - process management
 - virtual memory
