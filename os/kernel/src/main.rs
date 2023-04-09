@@ -1,45 +1,96 @@
 #![no_std]
 #![no_main]
+#![feature(panic_info_message)]
 
+#[macro_use]
+mod console;
 mod lang_items;
 mod sbi;
-mod console;
 
-use core::{arch::global_asm, str::Bytes};
+pub mod syscall;
+pub mod trap;
+
+use core::{arch::global_asm,arch::asm, str::Bytes};
 use crate::{sbi::{console_putchar, console_getchar, shutdown}, console::print};
 use xmas_elf::ElfFile;
+use trap::TrapContext;
 
 global_asm!(include_str!("entry.asm"));
+global_asm!(include_str!("user_bin.S"));
 
+const USER_STACK_SIZE: usize = 4096 * 2;
+const KERNEL_STACK_SIZE: usize = 4096 * 2;
+
+#[repr(align(4096))]
+struct KernelStack {
+    data: [u8; KERNEL_STACK_SIZE],
+}
+
+#[repr(align(4096))]
+struct UserStack {
+    data: [u8; USER_STACK_SIZE],
+}
+
+static KERNEL_STACK: KernelStack = KernelStack {
+    data: [0; KERNEL_STACK_SIZE],
+};
+static USER_STACK: UserStack = UserStack {
+    data: [0; USER_STACK_SIZE],
+};
+
+impl KernelStack {
+    fn get_sp(&self) -> usize {
+        self.data.as_ptr() as usize + KERNEL_STACK_SIZE
+    }
+    pub fn push_context(&self, cx: TrapContext) -> &'static mut TrapContext {
+        let cx_ptr = (self.get_sp() - core::mem::size_of::<TrapContext>()) as *mut TrapContext;
+        unsafe {
+            *cx_ptr = cx;
+        }
+        unsafe { cx_ptr.as_mut().unwrap() }
+    }
+}
+
+impl UserStack {
+    fn get_sp(&self) -> usize {
+        self.data.as_ptr() as usize + USER_STACK_SIZE
+    }
+}
+
+
+
+#[no_mangle]
 unsafe fn test_userbin(){
 	let userbin=include_bytes!("../../user_c/build/main");
-
-	// for y in 0..600{
-	// 	for x in 0..16{
-	// 		print!("{:02x} ",userbin[y*16+x]);
-	// 	}
-	// 	print!("\n")
-	// }
-	// let mut buffer=Vec::new();
 	let elf_file=ElfFile::new(userbin).unwrap();
-	print!("getting:");
-	let x=elf_file.find_section_by_name(".rodata").unwrap().offset();
-	print!("offset:{:#x}\n",x);
 
-	// print!("\n");
-	// let pointer = userbin_start as usize as *mut u8;
-	// let endpos=userbin_end as usize as *mut u8;
+	asm!("fence.i");
+	let text=elf_file.find_section_by_name(".text").unwrap();
+	let data=elf_file.find_section_by_name(".data").unwrap();
+	let sections=[text,data];
+	
+	for sec in sections{
+		let src=core::slice::from_raw_parts((userbin as *const u8).add(sec.offset() as usize) , sec.size() as usize);
+		let dst=core::slice::from_raw_parts_mut(sec.address() as *mut u8, sec.size() as usize);
 
-	// while pointer!=endpos{
-	// 	print!("{:02x} ",*(pointer));
-	// 	pointer.add(1);
-	// }
-	// for y in 0..600{
-	// 	for x in 0..16{
-	// 		print!("{:02x} ",*(pointer.add(16*y+x)));
-	// 	}
-	// 	print!("\n")
-	// }
+		dst.copy_from_slice(src);
+	}
+	
+	println!("");
+	println!("entry:{:#x}",elf_file.header.pt2.entry_point());
+
+	extern "C" {
+        fn __restore(cx_addr: usize);
+    }
+	// println!("userstack:{:#x}",USER_STACK.get_sp());
+
+
+	__restore(KERNEL_STACK.push_context(TrapContext::app_init_context(
+		elf_file.header.pt2.entry_point() as usize,
+		0x80700000
+		// USER_STACK.get_sp()
+	)) as *const _ as usize);
+
 	print!("\n");
 }
 
@@ -67,19 +118,12 @@ pub fn rust_main() -> !{
 	print!( "        /:::/    /               /:::/    /              \\:::\\____\\                                        \\:::\\____\\                \\::/____/               \\::::/    /       \n");
 	print!( "        \\::/    /                \\::/    /                \\::/    /                                         \\::/    /                 ~~                      \\::/    /        \n");
 	print!( "         \\/____/                  \\/____/                  \\/____/                                           \\/____/                                           \\/____/         \n");
-	println!("Shell Started!");
-    loop{
-		let c:char;
-		c=console_getchar() as u8 as char;
-		if c as u8 == 13{
-			unsafe{
-				test_userbin();
-			}
-			// print!("\nHello! This is fake shell speaking.\n");
-		}else{
-			print!("{}",c);
-		}
+	
+	trap::init();
+	unsafe{
+		test_userbin();
 	}
+	panic!();
 }
 
 fn clear_bss() {

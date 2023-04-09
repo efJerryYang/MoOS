@@ -12,11 +12,12 @@ OBJDUMP := rust-objdump --arch-name=riscv64
 OBJCOPY := rust-objcopy --binary-architecture=riscv64
 
 build: 
-	cargo build --release
+	cargo build --release 
 
 binary:build 
 	$(OBJCOPY)  $(ELF) --strip-all -O binary $(patsubst $(TARGET_DIR)/%, $(TARGET_DIR)/%.bin, $(ELF))
-	# $(OBJDUMP) -D $(ELF) > $(TARGET_DIR)/os.asm
+asm:build
+	$(OBJDUMP) -D $(ELF) > $(TARGET_DIR)/os.asm
 
 run: build binary
 	qemu-system-riscv64 \
@@ -25,3 +26,16 @@ run: build binary
     -bios ../../bootloader/rustsbi-qemu.bin \
     -device loader,file=$(TARGET_DIR)/os.bin,addr=0x80200000
 
+debug: build binary
+	qemu-system-riscv64 \
+    -machine virt \
+    -nographic \
+    -bios ../../bootloader/rustsbi-qemu.bin \
+    -device loader,file=$(TARGET_DIR)/os.bin,addr=0x80200000 \
+    -s -S
+
+gdb:
+	riscv64-unknown-elf-gdb \
+    -ex 'file $(TARGET_DIR)/os' \
+    -ex 'set arch riscv:rv64' \
+    -ex 'target remote localhost:1234'
