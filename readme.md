@@ -3,5 +3,4 @@
 
 # Run on QEMU:
 	cd os
-	make fs-img
-	make run
+	make all
