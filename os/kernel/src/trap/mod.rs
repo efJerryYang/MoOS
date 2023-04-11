@@ -39,13 +39,13 @@ pub fn init() {
 pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
     let scause = scause::read(); // get trap cause
     let stval = stval::read(); // get extra value
-	// println!("USER TRAP: stval={:#x},pc={:#x}",stval,cx.sepc);
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
             cx.sepc += 4;
             cx.x[10] = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
         }
         Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) => {
+			println!("USER TRAP: stval={:#x},pc={:#x}",stval,cx.sepc);
             println!("[kernel] PageFault in application, kernel killed it.");
 			panic!();
         }

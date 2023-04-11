@@ -16,9 +16,11 @@ Compile user programs:
 # Progress:
 ## supported system calls:
 ``` C
-read(int fd, char* buf, int len);
-write(int fd, const char* buf, int len);
-exit(int code);
+int read(int fd, char* buf, int len);
+int write(int fd, const char* buf, int len);
+int exit(int code);
+//
+int brk(int len);//grow len and return the break point.
 ```
 ## yet to do:
 - process management

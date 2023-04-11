@@ -1,7 +1,6 @@
 #include <stdarg.h>
 typedef unsigned int uint;
 typedef unsigned long long uint64;
-#define va_arg(ap, type) (__builtin_va_arg(ap, type))
 
 char getchar(){
 	char c;

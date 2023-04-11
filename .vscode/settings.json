@@ -1,6 +1,9 @@
 {
 	"files.associations": {
 		"syscall.h": "c",
-		"syscall_ids.h": "c"
-	}
+		"syscall_ids.h": "c",
+		"stdio.c": "cpp"
+	},
+	"rust.target": "thumbv7em-none-eabihf",
+    "rust.all_targets": false
 }

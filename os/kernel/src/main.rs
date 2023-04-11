@@ -16,7 +16,6 @@ use xmas_elf::ElfFile;
 use trap::TrapContext;
 
 global_asm!(include_str!("entry.asm"));
-global_asm!(include_str!("user_bin.S"));
 
 const USER_STACK_SIZE: usize = 4096 * 2;
 const KERNEL_STACK_SIZE: usize = 4096 * 2;
@@ -59,22 +58,34 @@ impl UserStack {
 
 
 
-#[no_mangle]
-unsafe fn test_userbin(){
-	let userbin=include_bytes!("../../user_c/build/main");
-	let elf_file=ElfFile::new(userbin).unwrap();
-
-	let text=elf_file.find_section_by_name(".text").unwrap();
-	let data=elf_file.find_section_by_name(".data").unwrap();
-	let bss=elf_file.find_section_by_name(".bss").unwrap();
-
-	let copylist=[text,data];
-	for sec in copylist{
-		let src=core::slice::from_raw_parts((userbin as *const u8).add(sec.offset() as usize) , sec.size() as usize);
-		let dst=core::slice::from_raw_parts_mut(sec.address() as *mut u8, sec.size() as usize);
-		dst.copy_from_slice(src);
+unsafe fn load_elf(elf_file:&ElfFile,userbin:&[u8]){
+	let phc = elf_file.header.pt2.ph_count();
+	for i in 0 .. phc{
+		let program_header=elf_file.program_header(i).unwrap();
+		println!("LOAD:{}",program_header.get_type().unwrap()==xmas_elf::program::Type::Load);
+		println!("memsize:{},offset:{:#x},vaddr:{:#x},paddr:{:#x},endaddr:{:#x}",
+			program_header.mem_size(),
+			program_header.offset(),
+			program_header.virtual_addr(),
+			program_header.physical_addr(),
+			program_header.physical_addr()+program_header.mem_size()
+		);
+		if program_header.get_type().unwrap()==xmas_elf::program::Type::Load {
+			let src=core::slice::from_raw_parts((userbin.as_ptr()).add(program_header.offset() as usize) , program_header.mem_size() as usize);
+			let dst=core::slice::from_raw_parts_mut(program_header.physical_addr() as *mut u8, program_header.mem_size() as usize);
+			dst.copy_from_slice(src);
+		}
 	}
+}
+
+#[no_mangle]
+unsafe fn load_user_file(){
+	let userbin=include_bytes!("../../user_c/build/main");
+	// let userbin=include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getpid");
+	let elf_file=ElfFile::new(userbin).unwrap();
+	load_elf(&elf_file,userbin);
 	
+	let bss=elf_file.find_section_by_name(".bss").unwrap();
 	(bss.address() as usize..bss.address() as usize+bss.size() as usize).for_each(|a| {
 		(a as *mut u8).write_volatile(0)
     });
@@ -86,7 +97,6 @@ unsafe fn test_userbin(){
 		fn __restore(cx_addr: usize);
     }
 	// println!("userstack:{:#x}",USER_STACK.get_sp());
-	
 	
 	asm!("fence.i");
 	__restore(KERNEL_STACK.push_context(TrapContext::app_init_context(
@@ -100,31 +110,11 @@ unsafe fn test_userbin(){
 #[no_mangle]
 pub fn rust_main() -> !{
 	clear_bss();
-	print!( "          _____                    _____                    _____                    _____                    _____                   _______                   _____          \n");
-	print!( "         /\\    \\                  /\\    \\                  /\\    \\                  /\\    \\                  /\\    \\                 /::\\    \\                 /\\    \\         \n");
-	print!( "        /::\\____\\                /::\\    \\                /::\\    \\                /::\\____\\                /::\\    \\               /::::\\    \\               /::\\    \\        \n");
-	print!( "       /::::|   |               /::::\\    \\               \\:::\\    \\              /:::/    /               /::::\\    \\             /::::::\\    \\             /::::\\    \\       \n");
-	print!( "      /:::::|   |              /::::::\\    \\               \\:::\\    \\            /:::/    /               /::::::\\    \\           /::::::::\\    \\           /::::::\\    \\      \n");
-	print!( "     /::::::|   |             /:::/\\:::\\    \\               \\:::\\    \\          /:::/    /               /:::/\\:::\\    \\         /:::/~~\\:::\\    \\         /:::/\\:::\\    \\     \n");
-	print!( "    /:::/|::|   |            /:::/__\\:::\\    \\               \\:::\\    \\        /:::/____/               /:::/__\\:::\\    \\       /:::/    \\:::\\    \\       /:::/__\\:::\\    \\    \n");
-	print!( "   /:::/ |::|   |           /::::\\   \\:::\\    \\              /::::\\    \\       |::|    |               /::::\\   \\:::\\    \\     /:::/    / \\:::\\    \\      \\:::\\   \\:::\\    \\   \n");
-	print!( "  /:::/  |::|   | _____    /::::::\\   \\:::\\    \\    ____    /::::::\\    \\      |::|    |     _____    /::::::\\   \\:::\\    \\   /:::/____/   \\:::\\____\\   ___\\:::\\   \\:::\\    \\  \n");
-	print!( " /:::/   |::|   |/\\    \\  /:::/\\:::\\   \\:::\\    \\  /\\   \\  /:::/\\:::\\    \\     |::|    |    /\\    \\  /:::/\\:::\\   \\:::\\    \\ |:::|    |     |:::|    | /\\   \\:::\\   \\:::\\    \\ \n");
-	print!( "/:: /    |::|   /::\\____\\/:::/  \\:::\\   \\:::\\____\\/::\\   \\/:::/  \\:::\\____\\    |::|    |   /::\\____\\/:::/__\\:::\\   \\:::\\____\\|:::|____|     |:::|    |/::\\   \\:::\\   \\:::\\____\\\n");
-	print!( "\\::/    /|::|  /:::/    /\\::/    \\:::\\  /:::/    /\\:::\\  /:::/    \\::/    /    |::|    |  /:::/    /\\:::\\   \\:::\\   \\::/    / \\:::\\    \\   /:::/    / \\:::\\   \\:::\\   \\::/    /\n");
-	print!( " \\/____/ |::| /:::/    /  \\/____/ \\:::\\/:::/    /  \\:::\\/:::/    / \\/____/     |::|    | /:::/    /  \\:::\\   \\:::\\   \\/____/   \\:::\\    \\ /:::/    /   \\:::\\   \\:::\\   \\/____/ \n");
-	print!( "         |::|/:::/    /            \\::::::/    /    \\::::::/    /              |::|____|/:::/    /    \\:::\\   \\:::\\    \\        \\:::\\    /:::/    /     \\:::\\   \\:::\\    \\     \n");
-	print!( "         |::::::/    /              \\::::/    /      \\::::/____/               |:::::::::::/    /      \\:::\\   \\:::\\____\\        \\:::\\__/:::/    /       \\:::\\   \\:::\\____\\    \n");
-	print!( "         |:::::/    /               /:::/    /        \\:::\\    \\               \\::::::::::/____/        \\:::\\   \\::/    /         \\::::::::/    /         \\:::\\  /:::/    /    \n");
-	print!( "         |::::/    /               /:::/    /          \\:::\\    \\               ~~~~~~~~~~               \\:::\\   \\/____/           \\::::::/    /           \\:::\\/:::/    /     \n");
-	print!( "         /:::/    /               /:::/    /            \\:::\\    \\                                        \\:::\\    \\                \\::::/    /             \\::::::/    /      \n");
-	print!( "        /:::/    /               /:::/    /              \\:::\\____\\                                        \\:::\\____\\                \\::/____/               \\::::/    /       \n");
-	print!( "        \\::/    /                \\::/    /                \\::/    /                                         \\::/    /                 ~~                      \\::/    /        \n");
-	print!( "         \\/____/                  \\/____/                  \\/____/                                           \\/____/                                           \\/____/         \n");
-	
+	println!("-----------NAIVE-OS-----------");
+
 	trap::init();
 	unsafe{
-		test_userbin();
+		load_user_file();
 	}
 	println!("unreachable part.");
 	loop{}
