@@ -1,11 +1,22 @@
 #![no_std]
 #![no_main]
 #![feature(panic_info_message)]
+#![feature(alloc_error_handler)]
+
+extern crate alloc;
+
+#[path = "boards/qemu.rs"]
+mod board;
 
 #[macro_use]
+extern crate bitflags;
+#[macro_use]
 mod console;
+mod config;
 mod lang_items;
 mod sbi;
+mod sync;
+mod mm;
 
 pub mod syscall;
 pub mod trap;
@@ -81,7 +92,6 @@ unsafe fn load_elf(elf_file:&ElfFile,userbin:&[u8]){
 #[no_mangle]
 unsafe fn load_user_file(){
 	let userbin=include_bytes!("../../user_c/build/main");
-	// let userbin=include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getpid");
 	let elf_file=ElfFile::new(userbin).unwrap();
 	load_elf(&elf_file,userbin);
 	
@@ -93,16 +103,15 @@ unsafe fn load_user_file(){
 	println!("");
 	println!("entry:{:#x}",elf_file.header.pt2.entry_point());
 	
+	println!("userstack:{:#x}",USER_STACK.get_sp());
+	
+	asm!("fence.i");
 	extern "C" {
 		fn __restore(cx_addr: usize);
     }
-	// println!("userstack:{:#x}",USER_STACK.get_sp());
-	
-	asm!("fence.i");
 	__restore(KERNEL_STACK.push_context(TrapContext::app_init_context(
 		elf_file.header.pt2.entry_point() as usize,
-		0x80700000
-		// USER_STACK.get_sp()
+		USER_STACK.get_sp()
 	)) as *const _ as usize);
 
 }
@@ -113,6 +122,7 @@ pub fn rust_main() -> !{
 	println!("-----------NAIVE-OS-----------");
 
 	trap::init();
+	mm::init();
 	unsafe{
 		load_user_file();
 	}
@@ -120,13 +130,15 @@ pub fn rust_main() -> !{
 	loop{}
 }
 
+#[inline(always)]
 fn clear_bss() {
     extern "C" {
         fn sbss();
         fn ebss();
     }
-    (sbss as usize..ebss as usize).for_each(|a| {
-        unsafe { (a as *mut u8).write_volatile(0) }
-    });
+    unsafe {
+        core::slice::from_raw_parts_mut(sbss as usize as *mut u8, ebss as usize - sbss as usize)
+            .fill(0);
+    }
 }
 

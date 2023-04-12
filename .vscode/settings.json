@@ -4,6 +4,16 @@
 		"syscall_ids.h": "c",
 		"stdio.c": "cpp"
 	},
-	"rust.target": "thumbv7em-none-eabihf",
-    "rust.all_targets": false
+	"rust-analyzer.linkedProjects": [
+		"/home/max/os/ftl-os/code/kernel/Cargo.toml",
+		"/home/max/os/ftl-os/code/user/Cargo.toml",
+		"/home/max/os/naive-os/os/kernel/Cargo.toml",
+		"/home/max/os/rCore-Tutorial-v3/os/Cargo.toml",
+		"./os/kernel/Cargo.toml"
+	],
+	"rust-analyzer.check.allTargets": false,
+	"rust-analyzer.check.extraArgs": [
+		"--target",
+		"riscv64gc-unknown-none-elf"
+	]
 }
