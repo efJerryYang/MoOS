@@ -19,6 +19,8 @@ Compile user programs:
 int read(int fd, char* buf, int len);
 int write(int fd, const char* buf, int len);
 int exit(int code);
+int getpid(void);
+int getppid(void);
 //
 int brk(int len);//grow len and return the break point.
 ```

@@ -29,10 +29,8 @@ use alloc::{vec,vec::Vec};
 use core::{arch::global_asm,arch::asm, str::Bytes, borrow::BorrowMut};
 use crate::{sbi::{console_putchar, console_getchar, shutdown}, console::print, mm::{KERNEL_SPACE, MemorySet, translated_byte_buffer}, trap::{trap_handler, trap_return}, task::TASKMANAGER, config::{TRAMPOLINE, KERNEL_STACK_SIZE, USER_STACK_SIZE}};
 use config::{TRAPFRAME};
-use task::TaskManager;
 use xmas_elf::ElfFile;
 use trap::TrapContext;
-use crate::task::TaskControlBlock;
 use crate::mm::memory_set::{MapArea,MapType,MapPermission};
 use crate::mm::VirtAddr;
 
@@ -49,9 +47,6 @@ unsafe fn load_elf(elf_file:&ElfFile){
 	KERNEL_SPACE.exclusive_access().insert_framed_area((TRAMPOLINE-KERNEL_STACK_SIZE).into(), (TRAMPOLINE).into(), MapPermission::R|MapPermission::W);
 	task.trapframe_ppn=user_pagetable.translate(VirtAddr::from(TRAPFRAME).into()).unwrap().ppn();
 	
-	// let mut x:&mut usize=user_pagetable.translate((user_stack-USER_STACK_SIZE).into()).unwrap().ppn().get_mut();
-	// *x=0x2333;
-
 	task.memory_set=user_pagetable;
 	*task.trapframe_ppn.get_mut()=TrapContext::app_init_context(entry, user_stack-8,KERNEL_SPACE.exclusive_access().token(),TRAMPOLINE, trap_handler as usize);
 
@@ -61,8 +56,8 @@ unsafe fn load_elf(elf_file:&ElfFile){
 
 #[no_mangle]
 unsafe fn load_user_file(){
-	// let userbin=include_bytes!("../../user_c/build/main");
-	let userbin=include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getpid");
+	let userbin=include_bytes!("../../user_c/build/main");
+	// let userbin=include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/write");
 	let elf_file=ElfFile::new(userbin).unwrap();
 	load_elf(&elf_file);
 }

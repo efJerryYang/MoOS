@@ -14,8 +14,13 @@ signed main(){
 		printf(">");
 		char c=getchar();char* t=buf;
 		while(c!=13){
-			putchar(c);
-			*t++=c;
+			if(c==0x08||c==0x7f){
+				printf("\x08 \x08");
+				*t--=0;
+			}else{
+				putchar(c);
+				*t++=c;
+			}
 			c=getchar();
 		}
 		*t=0;
@@ -24,6 +29,6 @@ signed main(){
 		if(!strcmp(buf,"exit")) break;
 		printf("connot excute %s.\n",buf);
 	}
-	exit(-1);
+	exit(0);
 	// return 0;
 }
