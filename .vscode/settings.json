@@ -2,7 +2,8 @@
 	"files.associations": {
 		"syscall.h": "c",
 		"syscall_ids.h": "c",
-		"stdio.c": "cpp"
+		"stdio.c": "cpp",
+		"string.c": "cpp"
 	},
 	"rust-analyzer.linkedProjects": [
 		"/home/max/os/ftl-os/code/kernel/Cargo.toml",

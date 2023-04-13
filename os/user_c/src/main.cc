@@ -15,12 +15,15 @@ signed main(){
 		char c=getchar();char* t=buf;
 		while(c!=13){
 			if(c==0x08||c==0x7f){
-				printf("\x08 \x08");
-				*t--=0;
+				if(t!=buf){
+					printf("\x08 \x08");
+					*t--=0;
+				}
 			}else{
 				putchar(c);
 				*t++=c;
 			}
+
 			c=getchar();
 		}
 		*t=0;
