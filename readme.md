@@ -24,5 +24,4 @@ int brk(int len);//grow len and return the break point.
 ```
 ## yet to do:
 - process management
-- virtual memory
 - file system
