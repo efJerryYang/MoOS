@@ -27,7 +27,7 @@ pub mod syscall;
 pub mod trap;
 use alloc::{vec,vec::Vec};
 use core::{arch::global_asm,arch::asm, str::Bytes, borrow::BorrowMut};
-use crate::{sbi::{console_putchar, console_getchar, shutdown}, console::print, mm::{KERNEL_SPACE, MemorySet}, trap::{trap_handler, trap_return}, task::TASKMANAGER, config::{TRAMPOLINE, KERNEL_STACK_SIZE}};
+use crate::{sbi::{console_putchar, console_getchar, shutdown}, console::print, mm::{KERNEL_SPACE, MemorySet, translated_byte_buffer}, trap::{trap_handler, trap_return}, task::TASKMANAGER, config::{TRAMPOLINE, KERNEL_STACK_SIZE, USER_STACK_SIZE}};
 use config::{TRAPFRAME};
 use task::TaskManager;
 use xmas_elf::ElfFile;
@@ -45,12 +45,15 @@ unsafe fn load_elf(elf_file:&ElfFile){
 	
 	// let user_pagetable=&mut task.memory_set;
 	let (user_pagetable,user_stack,entry)= MemorySet::from_elf(elf_file);
-	println!("{:#x}",entry);
+	println!("entry:{:#x}",entry);
 	KERNEL_SPACE.exclusive_access().insert_framed_area((TRAMPOLINE-KERNEL_STACK_SIZE).into(), (TRAMPOLINE).into(), MapPermission::R|MapPermission::W);
 	task.trapframe_ppn=user_pagetable.translate(VirtAddr::from(TRAPFRAME).into()).unwrap().ppn();
-	task.memory_set=user_pagetable;
+	
+	// let mut x:&mut usize=user_pagetable.translate((user_stack-USER_STACK_SIZE).into()).unwrap().ppn().get_mut();
+	// *x=0x2333;
 
-	*task.trapframe_ppn.get_mut()=TrapContext::app_init_context(entry, user_stack, KERNEL_SPACE.exclusive_access().token(),TRAMPOLINE, trap_handler as usize);
+	task.memory_set=user_pagetable;
+	*task.trapframe_ppn.get_mut()=TrapContext::app_init_context(entry, user_stack-8,KERNEL_SPACE.exclusive_access().token(),TRAMPOLINE, trap_handler as usize);
 
 	drop(inner);
 	trap_return();
@@ -58,7 +61,8 @@ unsafe fn load_elf(elf_file:&ElfFile){
 
 #[no_mangle]
 unsafe fn load_user_file(){
-	let userbin=include_bytes!("../../user_c/build/main");
+	// let userbin=include_bytes!("../../user_c/build/main");
+	let userbin=include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getpid");
 	let elf_file=ElfFile::new(userbin).unwrap();
 	load_elf(&elf_file);
 }
