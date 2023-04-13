@@ -4,11 +4,12 @@ use super::{frame_alloc, FrameTracker};
 use super::{PTEFlags, PageTable, PageTableEntry};
 use super::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
 use super::{StepByOne, VPNRange};
-use crate::config::{MEMORY_END, MMIO, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE};
+use crate::config::{MEMORY_END, MMIO, PAGE_SIZE, TRAMPOLINE, TRAPFRAME, USER_STACK_SIZE};
 use crate::sync::UPSafeCell;
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use xmas_elf::ElfFile;
 use core::arch::asm;
 use lazy_static::*;
 use riscv::register::satp;
@@ -60,7 +61,7 @@ impl MemorySet {
             None,
         );
     }
-    fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
+    pub fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
         map_area.map(&mut self.page_table);
         if let Some(data) = data {
             map_area.copy_data(&mut self.page_table, data);
@@ -68,7 +69,7 @@ impl MemorySet {
         self.areas.push(map_area);
     }
     /// Mention that trampoline is not collected by areas.
-    fn map_trampoline(&mut self) {
+    pub fn map_trampoline(&mut self) {
         self.page_table.map(
             VirtAddr::from(TRAMPOLINE).into(),
             PhysAddr::from(strampoline as usize).into(),
@@ -154,12 +155,11 @@ impl MemorySet {
     }
     /// Include sections in elf and trampoline and TrapContext and user stack,
     /// also returns user_sp and entry point.
-    pub fn from_elf(elf_data: &[u8]) -> (Self, usize, usize) {
+    pub fn from_elf(elf:&ElfFile) -> (Self, usize, usize) {
         let mut memory_set = Self::new_bare();
         // map trampoline
         memory_set.map_trampoline();
         // map program headers of elf, with U flag
-        let elf = xmas_elf::ElfFile::new(elf_data).unwrap();
         let elf_header = elf.header;
         let magic = elf_header.pt1.magic;
         assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
@@ -217,7 +217,7 @@ impl MemorySet {
         // map TrapContext
         memory_set.push(
             MapArea::new(
-                TRAP_CONTEXT.into(),
+                TRAPFRAME.into(),
                 TRAMPOLINE.into(),
                 MapType::Framed,
                 MapPermission::R | MapPermission::W,
@@ -270,10 +270,10 @@ impl MemorySet {
 
 /// map area structure, controls a contiguous piece of virtual memory
 pub struct MapArea {
-    vpn_range: VPNRange,
-    data_frames: BTreeMap<VirtPageNum, FrameTracker>,
-    map_type: MapType,
-    map_perm: MapPermission,
+    pub vpn_range: VPNRange,
+    pub data_frames: BTreeMap<VirtPageNum, FrameTracker>,
+    pub map_type: MapType,
+    pub map_perm: MapPermission,
 }
 
 impl MapArea {

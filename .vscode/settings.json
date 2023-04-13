@@ -9,6 +9,9 @@
 		"/home/max/os/ftl-os/code/user/Cargo.toml",
 		"/home/max/os/naive-os/os/kernel/Cargo.toml",
 		"/home/max/os/rCore-Tutorial-v3/os/Cargo.toml",
+		"./os/kernel/Cargo.toml",
+		"./os/kernel/Cargo.toml",
+		"./os/kernel/Cargo.toml",
 		"./os/kernel/Cargo.toml"
 	],
 	"rust-analyzer.check.allTargets": false,
