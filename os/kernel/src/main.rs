@@ -37,14 +37,16 @@ use crate::mm::VirtAddr;
 
 global_asm!(include_str!("entry.asm"));
 
-unsafe fn load_elf(elf_file:&ElfFile){
+unsafe fn crate_task_from_elf(userbin:&[u8]){
+	// let userbin=include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/write");
+	let elf_file=ElfFile::new(userbin).unwrap();
 	let mut inner=task_list.exclusive_access();
 	let idx=inner.len();
 	inner.push(PCB::new());
 	let task=&mut inner[idx];
 	
 	// let user_pagetable=&mut task.memory_set;
-	let (user_pagetable,user_stack,entry)= MemorySet::from_elf(elf_file);
+	let (user_pagetable,user_stack,entry)= MemorySet::from_elf(&elf_file);
 	println!("entry:{:#x}",entry);
 	KERNEL_SPACE.exclusive_access().insert_framed_area(
 		(TRAMPOLINE-KERNEL_STACK_SIZE*(idx+1)).into(),
@@ -63,11 +65,9 @@ unsafe fn load_elf(elf_file:&ElfFile){
 
 #[no_mangle]
 unsafe fn load_user_file(){
-	let userbin=include_bytes!("../../user_c/build/main");
-	// let userbin=include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/write");
-	let elf_file=ElfFile::new(userbin).unwrap();
-	load_elf(&elf_file);
-	load_elf(&elf_file);
+	crate_task_from_elf(include_bytes!("../../user_c/build/main"));
+	crate_task_from_elf(include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getpid"));
+	crate_task_from_elf(include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getppid"));
 	// load_elf(&elf_file);
 	// load_elf(&elf_file);
 	// load_elf(&elf_file);

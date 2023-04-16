@@ -451,7 +451,7 @@ Disassembly of section .text:
     1516:	863e                	mv	a2,a5
     1518:	85ba                	mv	a1,a4
     151a:	00001517          	auipc	a0,0x1
-    151e:	ba650513          	addi	a0,a0,-1114 # 20c0 <nuclear+0x28>
+    151e:	bb650513          	addi	a0,a0,-1098 # 20d0 <nuclear+0x38>
     1522:	ce1ff0ef          	jal	ra,1202 <_Z6printfPcz>
     1526:	addff0ef          	jal	ra,1002 <_Z7getcharv>
     152a:	87aa                	mv	a5,a0
@@ -473,7 +473,7 @@ Disassembly of section .text:
     1564:	a5878793          	addi	a5,a5,-1448 # 1fb8 <buf>
     1568:	04f70063          	beq	a4,a5,15a8 <main+0xc0>
     156c:	00001517          	auipc	a0,0x1
-    1570:	b6c50513          	addi	a0,a0,-1172 # 20d8 <nuclear+0x40>
+    1570:	b7c50513          	addi	a0,a0,-1156 # 20e8 <nuclear+0x50>
     1574:	c8fff0ef          	jal	ra,1202 <_Z6printfPcz>
     1578:	fe043783          	ld	a5,-32(s0)
     157c:	fff78713          	addi	a4,a5,-1
@@ -498,7 +498,7 @@ Disassembly of section .text:
     15c0:	fe043783          	ld	a5,-32(s0)
     15c4:	00078023          	sb	zero,0(a5)
     15c8:	00001517          	auipc	a0,0x1
-    15cc:	b1850513          	addi	a0,a0,-1256 # 20e0 <nuclear+0x48>
+    15cc:	b2850513          	addi	a0,a0,-1240 # 20f0 <nuclear+0x58>
     15d0:	c33ff0ef          	jal	ra,1202 <_Z6printfPcz>
     15d4:	00001517          	auipc	a0,0x1
     15d8:	9e450513          	addi	a0,a0,-1564 # 1fb8 <buf>
@@ -508,7 +508,7 @@ Disassembly of section .text:
     15e6:	0ff7f793          	zext.b	a5,a5
     15ea:	efb9                	bnez	a5,1648 <main+0x160>
     15ec:	00001597          	auipc	a1,0x1
-    15f0:	afc58593          	addi	a1,a1,-1284 # 20e8 <nuclear+0x50>
+    15f0:	b0c58593          	addi	a1,a1,-1268 # 20f8 <nuclear+0x60>
     15f4:	00001517          	auipc	a0,0x1
     15f8:	9c450513          	addi	a0,a0,-1596 # 1fb8 <buf>
     15fc:	e41ff0ef          	jal	ra,143c <_Z6strcmpPcS_>
@@ -517,7 +517,7 @@ Disassembly of section .text:
     1606:	0ff7f793          	zext.b	a5,a5
     160a:	e3a9                	bnez	a5,164c <main+0x164>
     160c:	00001597          	auipc	a1,0x1
-    1610:	ae458593          	addi	a1,a1,-1308 # 20f0 <nuclear+0x58>
+    1610:	af458593          	addi	a1,a1,-1292 # 2100 <nuclear+0x68>
     1614:	00001517          	auipc	a0,0x1
     1618:	9a450513          	addi	a0,a0,-1628 # 1fb8 <buf>
     161c:	e21ff0ef          	jal	ra,143c <_Z6strcmpPcS_>
@@ -530,7 +530,7 @@ Disassembly of section .text:
     1632:	00001597          	auipc	a1,0x1
     1636:	98658593          	addi	a1,a1,-1658 # 1fb8 <buf>
     163a:	00001517          	auipc	a0,0x1
-    163e:	abe50513          	addi	a0,a0,-1346 # 20f8 <nuclear+0x60>
+    163e:	ace50513          	addi	a0,a0,-1330 # 2108 <nuclear+0x70>
     1642:	bc1ff0ef          	jal	ra,1202 <_Z6printfPcz>
     1646:	bd6d                	j	1500 <main+0x18>
     1648:	0001                	nop
@@ -947,7 +947,7 @@ Disassembly of section .text:
     1a24:	e395                	bnez	a5,1a48 <_Z8get_timev+0x44>
     1a26:	fd843703          	ld	a4,-40(s0)
     1a2a:	67c1                	lui	a5,0x10
-    1a2c:	17fd                	addi	a5,a5,-1 # ffff <_GLOBAL_OFFSET_TABLE_+0xdddf>
+    1a2c:	17fd                	addi	a5,a5,-1 # ffff <_GLOBAL_OFFSET_TABLE_+0xddcf>
     1a2e:	8f7d                	and	a4,a4,a5
     1a30:	3e800793          	li	a5,1000
     1a34:	02f70733          	mul	a4,a4,a5
@@ -1503,14 +1503,15 @@ Disassembly of section .note.gnu.build-id:
     1f42:	0000                	unimp
     1f44:	00000003          	lb	zero,0(zero) # 0 <BASE_ADDRESS-0x1000>
     1f48:	00554e47          	fmsub.s	ft8,fa0,ft5,ft0,rmm
-    1f4c:	afdd                	j	2742 <_GLOBAL_OFFSET_TABLE_+0x522>
-    1f4e:	d122                	sw	s0,160(sp)
-    1f50:	53d73a1b          	.4byte	0x53d73a1b
-    1f54:	896e                	mv	s2,s11
-    1f56:	d5c2                	sw	a6,232(sp)
-    1f58:	d4779f37          	lui	t5,0xd4779
-    1f5c:	e74c                	sd	a1,136(a4)
-    1f5e:	3941                	addiw	s2,s2,-16
+    1f4c:	454d                	li	a0,19
+    1f4e:	7204                	ld	s1,32(a2)
+    1f50:	d308                	sw	a0,32(a4)
+    1f52:	a25830ef          	jal	ra,fffffffffff85976 <_GLOBAL_OFFSET_TABLE_+0xfffffffffff83746>
+    1f56:	83f8                	.2byte	0x83f8
+    1f58:	8b3c                	.2byte	0x8b3c
+    1f5a:	6072                	.2byte	0x6072
+    1f5c:	c0b9                	beqz	s1,1fa2 <_PROCEDURE_LINKAGE_TABLE_+0x82>
+    1f5e:	cfda                	sw	s6,220(sp)
 
 Disassembly of section .dynsym:
 
@@ -1549,7 +1550,7 @@ Disassembly of section .data:
     2086:	3736                	fld	fa4,360(sp)
     2088:	3938                	fld	fa4,112(a0)
     208a:	6261                	lui	tp,0x18
-    208c:	66656463          	bltu	a0,t1,26f4 <_GLOBAL_OFFSET_TABLE_+0x4d4>
+    208c:	66656463          	bltu	a0,t1,26f4 <_GLOBAL_OFFSET_TABLE_+0x4c4>
 	...
 
 0000000000002098 <nuclear>:
@@ -1560,133 +1561,141 @@ Disassembly of section .data:
     20a2:	6c75                	lui	s8,0x1d
     20a4:	296c                	fld	fa1,208(a0)
     20a6:	0000                	unimp
-    20a8:	6572                	ld	a0,280(sp)
-    20aa:	6c61                	lui	s8,0x18
-    20ac:	7320                	ld	s0,96(a4)
-    20ae:	6568                	ld	a0,200(a0)
-    20b0:	6c6c                	ld	a1,216(s0)
-    20b2:	7320                	ld	s0,96(a4)
-    20b4:	6174                	ld	a3,192(a0)
-    20b6:	6572                	ld	a0,280(sp)
-    20b8:	2164                	fld	fs1,192(a0)
-    20ba:	000a                	c.slli	zero,0x2
-    20bc:	0000                	unimp
-    20be:	0000                	unimp
-    20c0:	6c656873          	csrrsi	a6,0x6c6,10
-    20c4:	206c                	fld	fa1,192(s0)
-    20c6:	6425                	lui	s0,0x9
-    20c8:	6c2c                	ld	a1,88(s0)
-    20ca:	6e69                	lui	t3,0x1a
-    20cc:	2065                	.2byte	0x2065
-    20ce:	6425                	lui	s0,0x9
-    20d0:	003e                	c.slli	zero,0xf
-    20d2:	0000                	unimp
-    20d4:	0000                	unimp
-    20d6:	0000                	unimp
-    20d8:	2008                	fld	fa0,0(s0)
-    20da:	0008                	.2byte	0x8
-    20dc:	0000                	unimp
-    20de:	0000                	unimp
-    20e0:	000a                	c.slli	zero,0x2
+    20a8:	2d2d                	addiw	s10,s10,11
+    20aa:	2d2d                	addiw	s10,s10,11
+    20ac:	2d2d                	addiw	s10,s10,11
+    20ae:	2d2d                	addiw	s10,s10,11
+    20b0:	2d2d                	addiw	s10,s10,11
+    20b2:	6572                	ld	a0,280(sp)
+    20b4:	6c61                	lui	s8,0x18
+    20b6:	7320                	ld	s0,96(a4)
+    20b8:	6568                	ld	a0,200(a0)
+    20ba:	6c6c                	ld	a1,216(s0)
+    20bc:	7320                	ld	s0,96(a4)
+    20be:	6174                	ld	a3,192(a0)
+    20c0:	6572                	ld	a0,280(sp)
+    20c2:	2164                	fld	fs1,192(a0)
+    20c4:	2d2d                	addiw	s10,s10,11
+    20c6:	2d2d                	addiw	s10,s10,11
+    20c8:	2d2d                	addiw	s10,s10,11
+    20ca:	2d2d                	addiw	s10,s10,11
+    20cc:	0a2d                	addi	s4,s4,11
+    20ce:	0000                	unimp
+    20d0:	6c656873          	csrrsi	a6,0x6c6,10
+    20d4:	206c                	fld	fa1,192(s0)
+    20d6:	6425                	lui	s0,0x9
+    20d8:	6c2c                	ld	a1,88(s0)
+    20da:	6e69                	lui	t3,0x1a
+    20dc:	2065                	.2byte	0x2065
+    20de:	6425                	lui	s0,0x9
+    20e0:	003e                	c.slli	zero,0xf
     20e2:	0000                	unimp
     20e4:	0000                	unimp
     20e6:	0000                	unimp
-    20e8:	7865                	lui	a6,0xffff9
-    20ea:	7469                	lui	s0,0xffffa
+    20e8:	2008                	fld	fa0,0(s0)
+    20ea:	0008                	.2byte	0x8
     20ec:	0000                	unimp
     20ee:	0000                	unimp
-    20f0:	6979                	lui	s2,0x1e
-    20f2:	6c65                	lui	s8,0x19
-    20f4:	0064                	addi	s1,sp,12
+    20f0:	000a                	c.slli	zero,0x2
+    20f2:	0000                	unimp
+    20f4:	0000                	unimp
     20f6:	0000                	unimp
-    20f8:	6e6e6f63          	bltu	t3,t1,27f6 <_GLOBAL_OFFSET_TABLE_+0x5d6>
-    20fc:	6520746f          	jal	s0,974e <_GLOBAL_OFFSET_TABLE_+0x752e>
-    2100:	6378                	ld	a4,192(a4)
-    2102:	7475                	lui	s0,0xffffd
-    2104:	2065                	.2byte	0x2065
-    2106:	7325                	lui	t1,0xfffe9
-    2108:	0a2e                	slli	s4,s4,0xb
+    20f8:	7865                	lui	a6,0xffff9
+    20fa:	7469                	lui	s0,0xffffa
+    20fc:	0000                	unimp
+    20fe:	0000                	unimp
+    2100:	6979                	lui	s2,0x1e
+    2102:	6c65                	lui	s8,0x19
+    2104:	0064                	addi	s1,sp,12
+    2106:	0000                	unimp
+    2108:	6e6e6f63          	bltu	t3,t1,2806 <_GLOBAL_OFFSET_TABLE_+0x5d6>
+    210c:	6520746f          	jal	s0,975e <_GLOBAL_OFFSET_TABLE_+0x752e>
+    2110:	6378                	ld	a4,192(a4)
+    2112:	7475                	lui	s0,0xffffd
+    2114:	2065                	.2byte	0x2065
+    2116:	7325                	lui	t1,0xfffe9
+    2118:	0a2e                	slli	s4,s4,0xb
 	...
 
 Disassembly of section .dynamic:
 
-0000000000002110 <.dynamic>:
-    2110:	fef5                	bnez	a3,210c <nuclear+0x74>
-    2112:	6fff                	.2byte	0x6fff
-    2114:	0000                	unimp
-    2116:	0000                	unimp
-    2118:	1f98                	addi	a4,sp,1008
-    211a:	0000                	unimp
-    211c:	0000                	unimp
-    211e:	0000                	unimp
-    2120:	0005                	c.nop	1
-    2122:	0000                	unimp
+0000000000002120 <.dynamic>:
+    2120:	fef5                	bnez	a3,211c <nuclear+0x84>
+    2122:	6fff                	.2byte	0x6fff
     2124:	0000                	unimp
     2126:	0000                	unimp
-    2128:	1f90                	addi	a2,sp,1008
+    2128:	1f98                	addi	a4,sp,1008
     212a:	0000                	unimp
     212c:	0000                	unimp
     212e:	0000                	unimp
-    2130:	0006                	c.slli	zero,0x1
+    2130:	0005                	c.nop	1
     2132:	0000                	unimp
     2134:	0000                	unimp
     2136:	0000                	unimp
-    2138:	1f60                	addi	s0,sp,956
+    2138:	1f90                	addi	a2,sp,1008
     213a:	0000                	unimp
     213c:	0000                	unimp
     213e:	0000                	unimp
-    2140:	000a                	c.slli	zero,0x2
+    2140:	0006                	c.slli	zero,0x1
     2142:	0000                	unimp
     2144:	0000                	unimp
     2146:	0000                	unimp
-    2148:	0001                	nop
+    2148:	1f60                	addi	s0,sp,956
     214a:	0000                	unimp
     214c:	0000                	unimp
     214e:	0000                	unimp
-    2150:	0000000b          	.4byte	0xb
+    2150:	000a                	c.slli	zero,0x2
+    2152:	0000                	unimp
     2154:	0000                	unimp
     2156:	0000                	unimp
-    2158:	0018                	.2byte	0x18
+    2158:	0001                	nop
     215a:	0000                	unimp
     215c:	0000                	unimp
     215e:	0000                	unimp
-    2160:	0015                	c.nop	5
-	...
+    2160:	0000000b          	.4byte	0xb
+    2164:	0000                	unimp
+    2166:	0000                	unimp
+    2168:	0018                	.2byte	0x18
+    216a:	0000                	unimp
+    216c:	0000                	unimp
     216e:	0000                	unimp
-    2170:	00000007          	.4byte	0x7
+    2170:	0015                	c.nop	5
 	...
-    2180:	0008                	.2byte	0x8
+    217e:	0000                	unimp
+    2180:	00000007          	.4byte	0x7
 	...
-    218e:	0000                	unimp
-    2190:	0009                	c.nop	2
-    2192:	0000                	unimp
-    2194:	0000                	unimp
-    2196:	0000                	unimp
-    2198:	0018                	.2byte	0x18
-    219a:	0000                	unimp
-    219c:	0000                	unimp
+    2190:	0008                	.2byte	0x8
+	...
     219e:	0000                	unimp
-    21a0:	001e                	c.slli	zero,0x7
+    21a0:	0009                	c.nop	2
     21a2:	0000                	unimp
     21a4:	0000                	unimp
     21a6:	0000                	unimp
-    21a8:	0008                	.2byte	0x8
+    21a8:	0018                	.2byte	0x18
     21aa:	0000                	unimp
     21ac:	0000                	unimp
     21ae:	0000                	unimp
-    21b0:	6ffffffb          	.4byte	0x6ffffffb
+    21b0:	001e                	c.slli	zero,0x7
+    21b2:	0000                	unimp
     21b4:	0000                	unimp
     21b6:	0000                	unimp
-    21b8:	0001                	nop
-    21ba:	0800                	addi	s0,sp,16
+    21b8:	0008                	.2byte	0x8
+    21ba:	0000                	unimp
+    21bc:	0000                	unimp
+    21be:	0000                	unimp
+    21c0:	6ffffffb          	.4byte	0x6ffffffb
+    21c4:	0000                	unimp
+    21c6:	0000                	unimp
+    21c8:	0001                	nop
+    21ca:	0800                	addi	s0,sp,16
 	...
 
 Disassembly of section .got:
 
-0000000000002220 <.got>:
-    2220:	2110                	fld	fa2,0(a0)
-    2222:	0000                	unimp
-    2224:	0000                	unimp
+0000000000002230 <.got>:
+    2230:	2120                	fld	fs0,64(a0)
+    2232:	0000                	unimp
+    2234:	0000                	unimp
 	...
 
 Disassembly of section .comment:
@@ -1698,7 +1707,7 @@ Disassembly of section .comment:
    8:	6e75                	lui	t3,0x1d
    a:	7574                	ld	a3,232(a0)
    c:	3120                	fld	fs0,96(a0)
-   e:	2e31                	addiw	t3,t3,12 # 1d00c <_GLOBAL_OFFSET_TABLE_+0x1adec>
+   e:	2e31                	addiw	t3,t3,12 # 1d00c <_GLOBAL_OFFSET_TABLE_+0x1addc>
   10:	2d302e33          	.4byte	0x2d302e33
   14:	7531                	lui	a0,0xfffec
   16:	7562                	ld	a0,56(sp)
@@ -1716,7 +1725,7 @@ Disassembly of section .comment:
 Disassembly of section .riscv.attributes:
 
 0000000000000000 <.riscv.attributes>:
-   0:	3241                	addiw	tp,tp,-16 # 14ff0 <_GLOBAL_OFFSET_TABLE_+0x12dd0>
+   0:	3241                	addiw	tp,tp,-16 # 14ff0 <_GLOBAL_OFFSET_TABLE_+0x12dc0>
    2:	0000                	unimp
    4:	7200                	ld	s0,32(a2)
    6:	7369                	lui	t1,0xffffa
@@ -1728,7 +1737,7 @@ Disassembly of section .riscv.attributes:
   14:	6934                	ld	a3,80(a0)
   16:	7032                	.2byte	0x7032
   18:	5f30                	lw	a2,120(a4)
-  1a:	326d                	addiw	tp,tp,-5 # fffffffffffe0ffb <_GLOBAL_OFFSET_TABLE_+0xfffffffffffdeddb>
+  1a:	326d                	addiw	tp,tp,-5 # fffffffffffe0ffb <_GLOBAL_OFFSET_TABLE_+0xfffffffffffdedcb>
   1c:	3070                	fld	fa2,224(s0)
   1e:	615f 7032 5f30      	.byte	0x5f, 0x61, 0x32, 0x70, 0x30, 0x5f
   24:	3266                	fld	ft4,120(sp)

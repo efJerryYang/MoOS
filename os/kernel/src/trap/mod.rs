@@ -14,7 +14,7 @@
 
 mod context;
 
-use crate::{syscall::syscall, console::print, config::TRAPFRAME, task::{task_list, cpu::mycpu}};
+use crate::{syscall::syscall, console::print, config::TRAPFRAME, task::{task_list, cpu::mycpu, proc::kill}};
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
@@ -48,7 +48,8 @@ pub unsafe fn trap_handler() -> ! {
         Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) |Trap::Exception(Exception::LoadFault)|Trap::Exception(Exception::LoadPageFault) => {
 			println!("USER TRAP: stval={:#x},pc={:#x}",stval,cx.sepc);
             println!("[kernel] PageFault in application, kernel killed it.");
-			panic!();
+			kill();
+			// panic!();
         }
         Trap::Exception(Exception::IllegalInstruction) => {
             println!("[kernel] IllegalInstruction in application, kernel killed it.");

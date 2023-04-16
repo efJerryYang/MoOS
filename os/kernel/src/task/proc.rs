@@ -8,6 +8,11 @@ use super::{cpu::mycpu, task_list, PCB, ProcessState, __switch, ProcessContext};
 // 	&mut task_list.exclusive_access()[mycpu().proc_idx]
 // }
 
+pub unsafe fn kill(){
+	task_list.exclusive_access()[mycpu().proc_idx].state=ProcessState::ZOMBIE;
+	sched();
+}
+
 pub unsafe fn sched(){
 	let mut p=&mut task_list.exclusive_access()[mycpu().proc_idx];
 	__switch(&mut p.context as *mut ProcessContext, &mut mycpu().context as *mut ProcessContext);

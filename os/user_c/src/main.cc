@@ -9,7 +9,7 @@ int plus(int a,int b){
 }
 char buf[199];
 signed main(){
-	printf("real shell stared!\n");
+	printf("----------real shell stared!---------\n");
 	int cc=0;
 	while(1){
 		printf("shell %d,line %d>",getpid(),++cc);
