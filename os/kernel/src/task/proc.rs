@@ -10,10 +10,7 @@ use super::{cpu::mycpu, task_list, PCB, ProcessState, __switch, ProcessContext};
 
 pub unsafe fn sched(){
 	let mut p=&mut task_list.exclusive_access()[mycpu().proc_idx];
-	p.state=ProcessState::READY;
-	unsafe{
-		__switch(&mut p.context as *mut ProcessContext, &mut mycpu().context as *mut ProcessContext);
-	}
+	__switch(&mut p.context as *mut ProcessContext, &mut mycpu().context as *mut ProcessContext);
 }
 
 pub unsafe fn schedule(){
@@ -25,13 +22,11 @@ pub unsafe fn schedule(){
 			if(pcb.state == ProcessState::READY){
 				pcb.state=ProcessState::RUNNING;
 				cpu.proc_idx=idx;
-				unsafe{
-					let ts=&mut cpu.context as *mut ProcessContext;
-					__switch(
-						ts,
-						&mut pcb.context as *mut ProcessContext
-					);
-				}
+				println!("entering {}.",idx);
+				__switch(
+					&mut cpu.context as *mut ProcessContext,
+					&mut pcb.context as *mut ProcessContext
+				);
 			}
 		}
 	}

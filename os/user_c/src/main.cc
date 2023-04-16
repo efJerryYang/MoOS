@@ -10,8 +10,9 @@ int plus(int a,int b){
 char buf[199];
 signed main(){
 	printf("real shell stared!\n");
+	int cc=0;
 	while(1){
-		printf(">");
+		printf("shell %d,line %d>",getpid(),++cc);
 		char c=getchar();char* t=buf;
 		while(c!=13){
 			if(c==0x08||c==0x7f){

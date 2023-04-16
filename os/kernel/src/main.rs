@@ -68,6 +68,9 @@ unsafe fn load_user_file(){
 	let elf_file=ElfFile::new(userbin).unwrap();
 	load_elf(&elf_file);
 	load_elf(&elf_file);
+	// load_elf(&elf_file);
+	// load_elf(&elf_file);
+	// load_elf(&elf_file);
 	mycpu().proc_idx=0;
 	schedule();
 }

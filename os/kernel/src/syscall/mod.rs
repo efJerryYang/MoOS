@@ -32,7 +32,7 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_EXIT => sys_exit(args[0] as i32),
 		SYSCALL_READ => sys_read(args[0], args[1] as *mut u8, args[2]),
 		SYSCALL_SCHED_YIELD=> sys_yield(),
-		SYSCALL_GETPID => 233,
+		SYSCALL_GETPID => sys_getpid(),
 		SYSCALL_GETPPID => 2333,
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }

@@ -21,7 +21,6 @@ impl CPU {
 
 lazy_static!{
 	pub static ref CPUS:UPSafeCell<CPU>=unsafe{UPSafeCell::new(CPU::new())};
-	//  =[CPU{context:ProcessContext { ra: 0, sp: 0, s: [0;12] },proc:PCB { pid: 0, state: super::ProcessState::READY, trapframe_ppn: 0.into(), memory_set: MemorySet::new_bare() }};8];
 }
 
 pub fn mycpu()->&'static mut CPU{
