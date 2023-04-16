@@ -30,6 +30,10 @@ signed main(){
 		printf("\n");
 		if(strlen(buf)==0) continue;
 		if(!strcmp(buf,"exit")) break;
+		if(!strcmp(buf,"yield")){
+			sched_yield();
+			continue;
+		}
 		printf("connot excute %s.\n",buf);
 	}
 	exit(0);

@@ -1,10 +1,10 @@
-//! Implementation of [`TrapContext`]
+//! Implementation of [`TrapFrame`]
 
 use riscv::register::sstatus::{self, Sstatus, SPP};
 
 #[repr(C)]
 /// trap context structure containing sstatus, sepc and registers
-pub struct TrapContext {
+pub struct TrapFrame {
     /// general regs[0..31]
     pub x: [usize; 32],
     /// CSR sstatus      
@@ -19,7 +19,7 @@ pub struct TrapContext {
     pub trap_handler: usize,
 }
 
-impl TrapContext {
+impl TrapFrame {
     /// set stack pointer to x_2 reg (sp)
     pub fn set_sp(&mut self, sp: usize) {
         self.x[2] = sp;

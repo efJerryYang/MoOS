@@ -14,7 +14,7 @@
 
 mod context;
 
-use crate::{syscall::syscall, console::print, config::TRAPFRAME, task::TaskManager};
+use crate::{syscall::syscall, console::print, config::TRAPFRAME, task::{task_list, cpu::mycpu}};
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
@@ -23,7 +23,6 @@ use riscv::register::{
 };
 use core::arch::asm;
 use crate::config::TRAMPOLINE;
-use crate::task::TASKMANAGER;
 
 global_asm!(include_str!("trampoline.S"));
 
@@ -36,8 +35,8 @@ pub fn init() {
 
 #[no_mangle]
 /// handle an interrupt, exception, or system call from user space
-pub fn trap_handler() -> ! {
-	let cx:&mut TrapContext=TASKMANAGER.exclusive_access().task_list[0].trapframe_ppn.get_mut();
+pub unsafe fn trap_handler() -> ! {
+	let cx:&mut TrapFrame=task_list.exclusive_access()[mycpu().proc_idx].trapframe_ppn.get_mut();
     let scause = scause::read(); // get trap cause
     let stval = stval::read(); // get extra value
 	// println!("USER TRAP: stval={:#x},pc={:#x}",stval,cx.sepc);
@@ -66,9 +65,9 @@ pub fn trap_handler() -> ! {
 }
 
 #[no_mangle]
-pub fn trap_return() -> ! {
+pub unsafe fn trap_return() -> ! {
     let trapframe_ptr = TRAPFRAME;
-    let user_satp = TASKMANAGER.exclusive_access().task_list[0].memory_set.token();
+    let user_satp = task_list.exclusive_access_const()[mycpu().proc_idx].memory_set.token();
     extern "C" {
         fn __alltraps();
         fn __restore();
@@ -88,4 +87,4 @@ pub fn trap_return() -> ! {
 }
 
 
-pub use context::TrapContext;
+pub use context::TrapFrame;

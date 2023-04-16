@@ -153,7 +153,7 @@ impl MemorySet {
         }
         memory_set
     }
-    /// Include sections in elf and trampoline and TrapContext and user stack,
+    /// Include sections in elf and trampoline and TrapFrame and user stack,
     /// also returns user_sp and entry point.
     pub fn from_elf(elf:&ElfFile) -> (Self, usize, usize) {
         let mut memory_set = Self::new_bare();
@@ -214,7 +214,7 @@ impl MemorySet {
             ),
             None,
         );
-        // map TrapContext
+        // map TrapFrame
         memory_set.push(
             MapArea::new(
                 TRAPFRAME.into(),
