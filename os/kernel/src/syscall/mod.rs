@@ -17,6 +17,7 @@ const SYSCALL_EXIT: usize = 93;
 const SYSCALL_SCHED_YIELD: usize = 124;
 const SYSCALL_GETPID: usize = 172;
 const SYSCALL_GETPPID: usize = 173;
+const SYSCALL_FORK: usize = 220;
 
 mod fs;
 mod process;
@@ -34,6 +35,7 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 		SYSCALL_SCHED_YIELD=> sys_yield(),
 		SYSCALL_GETPID => sys_getpid(),
 		SYSCALL_GETPPID => 2333,
+		SYSCALL_FORK=> sys_fork(),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

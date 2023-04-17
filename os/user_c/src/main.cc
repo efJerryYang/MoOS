@@ -35,6 +35,10 @@ signed main(){
 			sched_yield();
 			continue;
 		}
+		if(!strcmp(buf,"fork")){
+			fork();
+			continue;
+		}
 		printf("connot excute %s.\n",buf);
 	}
 	exit(0);

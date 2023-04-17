@@ -4,7 +4,7 @@ use core::borrow::BorrowMut;
 
 use alloc::{sync::Arc, boxed::Box, task};
 
-use crate::{task::{pidcc, PCB, task_list, proc::{sched, schedule}, cpu::mycpu, ProcessState}, sync::UPSafeCell};
+use crate::{task::{pidcc, PCB, task_list, proc::{sched, schedule, fork}, cpu::mycpu, ProcessState}, sync::UPSafeCell};
 
 /// task exits and submit an exit code
 pub unsafe fn sys_exit(exit_code: i32) -> !{
@@ -21,13 +21,7 @@ pub unsafe fn sys_getpid()->isize{
 }
 
 pub unsafe fn sys_fork()->isize{
-	let newpid = {pidcc+1};
-	pidcc+=1;
-	let mut x=task_list.exclusive_access();
-	let mut pcb=PCB::new();
-	pcb.pid=newpid;
-	x.push(pcb);
-	return newpid as isize;
+	return fork() as isize;
 }
 
 pub unsafe fn sys_yield()->isize{

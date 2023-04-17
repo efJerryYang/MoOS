@@ -3,6 +3,7 @@
 use riscv::register::sstatus::{self, Sstatus, SPP};
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct ProcessContext {
 	pub ra:usize,
 	pub sp:usize,

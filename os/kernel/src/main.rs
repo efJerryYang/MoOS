@@ -40,7 +40,7 @@ global_asm!(include_str!("entry.asm"));
 unsafe fn crate_task_from_elf(userbin:&[u8]){
 	// let userbin=include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/write");
 	let elf_file=ElfFile::new(userbin).unwrap();
-	let mut inner=task_list.exclusive_access();
+	let inner=task_list.exclusive_access();
 	let idx=inner.len();
 	inner.push(PCB::new());
 	let task=&mut inner[idx];
@@ -66,11 +66,8 @@ unsafe fn crate_task_from_elf(userbin:&[u8]){
 #[no_mangle]
 unsafe fn load_user_file(){
 	crate_task_from_elf(include_bytes!("../../user_c/build/main"));
-	crate_task_from_elf(include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getpid"));
-	crate_task_from_elf(include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getppid"));
-	// load_elf(&elf_file);
-	// load_elf(&elf_file);
-	// load_elf(&elf_file);
+	// crate_task_from_elf(include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getpid"));
+	// crate_task_from_elf(include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getppid"));
 	mycpu().proc_idx=0;
 	schedule();
 }
