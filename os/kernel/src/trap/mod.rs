@@ -36,16 +36,19 @@ pub fn init() {
 #[no_mangle]
 /// handle an interrupt, exception, or system call from user space
 pub unsafe fn trap_handler() -> ! {
-	let cx:&mut TrapFrame=task_list.exclusive_access()[mycpu().proc_idx].trapframe_ppn.get_mut();
-    let scause = scause::read(); // get trap cause
+	let scause = scause::read(); // get trap cause
     let stval = stval::read(); // get extra value
 	// println!("USER TRAP: stval={:#x},pc={:#x}",stval,cx.sepc);
     match scause.cause() {
-        Trap::Exception(Exception::UserEnvCall) => {
-            cx.sepc += 4;
-            cx.x[10] = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
+		Trap::Exception(Exception::UserEnvCall) => {
+			let mut cx:&mut TrapFrame=task_list.exclusive_access()[mycpu().proc_idx].trapframe_ppn.get_mut();
+			cx.sepc += 4;
+            let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
+			cx=task_list.exclusive_access()[mycpu().proc_idx].trapframe_ppn.get_mut();
+			cx.x[10]=result;
         }
         Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) |Trap::Exception(Exception::LoadFault)|Trap::Exception(Exception::LoadPageFault) => {
+			let cx:&mut TrapFrame=task_list.exclusive_access()[mycpu().proc_idx].trapframe_ppn.get_mut();
 			println!("USER TRAP: stval={:#x},pc={:#x}",stval,cx.sepc);
             println!("[kernel] PageFault in application, kernel killed it.");
 			kill();
@@ -75,16 +78,14 @@ pub unsafe fn trap_return() -> ! {
     }
     let restore_va = __restore as usize - __alltraps as usize + TRAMPOLINE;
 	// println!("{:#x}",inner.task_list[0].trap_context.sepc);
-    unsafe {
-        asm!(
-            "fence.i",
-            "jr {restore_va}",             // jump to new addr of __restore asm function
-            restore_va = in(reg) restore_va,
-            in("a0") trapframe_ptr,      // a0 = virt addr of Trap Context
-            in("a1") user_satp,        // a1 = phy addr of usr page table
-            options(noreturn)
-        );
-    }
+	asm!(
+		"fence.i",
+		"jr {restore_va}",             // jump to new addr of __restore asm function
+		restore_va = in(reg) restore_va,
+		in("a0") trapframe_ptr,      // a0 = virt addr of Trap Context
+		in("a1") user_satp,        // a1 = phy addr of usr page table
+		options(noreturn)
+	);
 }
 
 

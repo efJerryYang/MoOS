@@ -1,18 +1,36 @@
 	.section .text
-	.globl call_userbin
-call_userbin:
-	# mv sp,a0
-	addi sp,sp,-16;
-	sd ra,0(sp)
-	sd s0,8(sp)
+	.global init_start
+	.global init_end
+	.align 3
+init_start:
+	.incbin "../user_c/build/init"
+init_end:
 
-	mv ra,a1
-	sret
+	.global shell_start
+	.global shell_end
+	.align 3
+shell_start:
+	.incbin "../user_c/build/shell"
+shell_end:
 
-nuclear:
-	j nuclear
+	.global getpid_start
+	.global getpid_end
+	.align 3
+getpid_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/riscv64/getpid"
+getpid_end:
 
-	# ld s0,8(sp)
-	# ld ra,0(sp)
-	
-	# ret
+	.global getppid_start
+	.global getppid_end
+	.align 3
+getppid_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/riscv64/getppid"
+getppid_end:
+
+	.global write_start
+	.global write_end
+	.align 3
+write_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/riscv64/write"
+write_end:
+

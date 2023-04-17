@@ -1,9 +1,10 @@
-use core::{cell::RefMut, borrow::BorrowMut, future::Ready};
+use core::{cell::RefMut, borrow::BorrowMut, future::Ready, task::Context};
 
 use alloc::task;
 use riscv::register::mcause::Trap;
+use xmas_elf::ElfFile;
 
-use crate::{mm::{MemorySet, memory_set::{self, KERNEL_SPACE, MapPermission}, VirtAddr}, trap::{TrapFrame, trap_return}, config::{TRAPFRAME, TRAMPOLINE, KERNEL_STACK_SIZE}};
+use crate::{mm::{MemorySet, memory_set::{self, KERNEL_SPACE, MapPermission}, VirtAddr}, trap::{TrapFrame, trap_return, trap_handler}, config::{TRAPFRAME, TRAMPOLINE, KERNEL_STACK_SIZE}};
 
 use super::{cpu::mycpu, task_list, PCB, ProcessState, __switch, ProcessContext, pidcc};
 
@@ -12,7 +13,7 @@ use super::{cpu::mycpu, task_list, PCB, ProcessState, __switch, ProcessContext, 
 // }
 
 pub unsafe fn fork()->usize{
-	let mut tasks=task_list.exclusive_access();
+	let tasks=task_list.exclusive_access();
 	let pid=tasks.len();
 	tasks.push(PCB::new());
 	// let mut newproc=&mut tasks[pid];
@@ -37,6 +38,23 @@ pub unsafe fn fork()->usize{
 	return pid;
 }
 
+pub unsafe fn exec_from_elf(elf_file:&ElfFile)->isize{
+	let (user_pagetable,user_stack,entry)= MemorySet::from_elf(&elf_file);
+	let nowpid=mycpu().proc_idx;
+	let mut nowproc=&mut task_list.exclusive_access()[nowpid];
+	nowproc.trapframe_ppn=user_pagetable.translate(VirtAddr::from(TRAPFRAME).into()).unwrap().ppn();
+
+	*(nowproc.trapframe_ppn.get_mut() as *mut TrapFrame)=TrapFrame::app_init_context(
+		entry,
+		user_stack-8, 
+		KERNEL_SPACE.exclusive_access().token(),
+		TRAMPOLINE-KERNEL_STACK_SIZE*nowpid, 
+		trap_handler as usize
+	);
+	nowproc.memory_set=user_pagetable;
+	0
+}
+
 pub unsafe fn kill(){
 	task_list.exclusive_access()[mycpu().proc_idx].state=ProcessState::ZOMBIE;
 	sched();
@@ -51,17 +69,20 @@ pub unsafe fn schedule(){
 	let tasks=task_list.exclusive_access();
 	let mut cpu=mycpu();
 	loop{
-		for idx in 0..tasks.len(){
+		let mut idx=0;
+		loop{
 			let mut pcb=&mut tasks[idx] ;
 			if(pcb.state == ProcessState::READY){
 				pcb.state=ProcessState::RUNNING;
 				cpu.proc_idx=idx;
-				println!("entering {}.",idx);
+				// println!("entering {}.",idx);
 				__switch(
 					&mut cpu.context as *mut ProcessContext,
 					&mut pcb.context as *mut ProcessContext
 				);
 			}
+			idx+=1;
+			if(idx>=task_list.exclusive_access().len()){break;}
 		}
 	}
 }

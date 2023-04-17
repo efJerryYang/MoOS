@@ -13,6 +13,8 @@ OBJDUMP := rust-objdump --arch-name=riscv64
 OBJCOPY := rust-objcopy --binary-architecture=riscv64
 
 build: 
+	g++ ../tools/userbin_gen.cc -o ../tools/userbin_gen
+	../tools/userbin_gen > src/user_bin.S
 	cargo build --release 
 
 binary:build 

@@ -10,7 +10,7 @@ mod address;
 mod frame_allocator;
 mod heap_allocator;
 pub mod memory_set;
-mod page_table;
+pub mod page_table;
 
 pub use address::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
 pub use address::{StepByOne, VPNRange};
@@ -26,3 +26,4 @@ pub fn init() {
     frame_allocator::init_frame_allocator();
     KERNEL_SPACE.exclusive_access().activate();
 }
+

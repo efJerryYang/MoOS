@@ -6,7 +6,7 @@ use alloc::{vec::Vec, vec};
 
 use crate::{mm::MemorySet, sync::UPSafeCell};
 
-use super::{ProcessContext, PCB};
+use super::{ProcessContext, PCB, task_list};
 
 pub struct CPU{
 	pub context:ProcessContext,

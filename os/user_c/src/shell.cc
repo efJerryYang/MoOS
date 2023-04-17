@@ -9,7 +9,7 @@ int plus(int a,int b){
 }
 char buf[199];
 signed main(){
-	printf("----------real shell stared!---------\n");
+	printf("----------shell started!---------\n");
 	int cc=0;
 	while(1){
 		printf("shell %d,line %d>",getpid(),++cc);
@@ -36,10 +36,16 @@ signed main(){
 			continue;
 		}
 		if(!strcmp(buf,"fork")){
-			fork();
+			int pid=fork();
+			printf("fork returned %d.\n",pid);
 			continue;
 		}
-		printf("connot excute %s.\n",buf);
+		int pid=fork();
+		if(pid==0){
+			exec(buf);
+		}else{
+			sched_yield();
+		}
 	}
 	exit(0);
 	// return 0;
