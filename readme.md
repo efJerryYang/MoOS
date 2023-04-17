@@ -22,9 +22,10 @@ int exit(int code);
 int getpid(void);
 int getppid(void);
 int sched_yield(void);
+int fork(void);
+int exec(void);
 //
 int brk(int len);//grow len and return the break point.
 ```
 ## yet to do:
-- process management
 - file system
