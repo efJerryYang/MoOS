@@ -15,10 +15,39 @@ char* testsuits_name[]={
 };
 
 signed main(){
-	printf("	.section .text\n");
 	int len0=sizeof(user_c_name)/8;
+	int len1=sizeof(testsuits_name)/8;
+	printf("	.align 3\n");
+	printf("	.section .data\n");
+	printf("	.globl _app_num\n");
+	printf("_app_num:\n");
+	printf("	.quad %d\n",len0+len1);
 	for(int i=0;i<len0;++i){
 		char* s=user_c_name[i];
+		printf("	.quad %s_start\n",s);
+		// printf("	.quad %s_end\n",s);
+	}
+	for(int i=0;i<len1;++i){
+		char* s=testsuits_name[i];
+		printf("	.quad %s_start\n",s);
+		if(i==len1-1) printf("	.quad %s_end\n",s);
+	}
+	
+	printf("\n");
+	printf("	.globl _app_names\n");
+	printf("_app_names:\n");
+	for(int i=0;i<len0;++i){
+		char* s=user_c_name[i];
+		printf("	.string \"%s\"\n",s);
+	}
+	for(int i=0;i<len1;++i){
+		char* s=testsuits_name[i];
+		printf("	.string \"%s\"\n",s);
+	}
+	printf("\n");
+	for(int i=0;i<len0;++i){
+		char* s=user_c_name[i];
+		printf("	.section .data\n");
 		printf("	.global %s_start\n",s);
 		printf("	.global %s_end\n",s);
 		printf("	.align 3\n");
@@ -27,7 +56,6 @@ signed main(){
 		printf("%s_end:\n",s);
 		printf("\n");
 	}
-	int len1=sizeof(testsuits_name)/8;
 	for(int i=0;i<len1;++i){
 		char* s=testsuits_name[i];
 		printf("	.global %s_start\n",s);

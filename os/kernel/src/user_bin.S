@@ -1,4 +1,28 @@
-	.section .text
+	.align 3
+	.section .data
+	.globl _app_num
+_app_num:
+	.quad 7
+	.quad init_start
+	.quad shell_start
+	.quad getpid_start
+	.quad getppid_start
+	.quad write_start
+	.quad gettimeofday_start
+	.quad sleep_start
+	.quad sleep_end
+
+	.globl _app_names
+_app_names:
+	.string "init"
+	.string "shell"
+	.string "getpid"
+	.string "getppid"
+	.string "write"
+	.string "gettimeofday"
+	.string "sleep"
+
+	.section .data
 	.global init_start
 	.global init_end
 	.align 3
@@ -6,6 +30,7 @@ init_start:
 	.incbin "../user_c/build/init"
 init_end:
 
+	.section .data
 	.global shell_start
 	.global shell_end
 	.align 3
