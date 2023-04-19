@@ -11,3 +11,6 @@ gdb:
 user:
 	cd user_c;make build
 all: user run
+
+clean:
+	cd kernel;cargo clean
