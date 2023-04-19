@@ -14,13 +14,14 @@
 
 mod context;
 
-use crate::{syscall::syscall, console::print, config::TRAPFRAME, task::{task_list, cpu::mycpu, proc::kill}};
+use crate::{syscall::syscall, console::print, config::TRAPFRAME, task::{task_list, cpu::mycpu, proc::*}, timer::set_next_trigger};
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
-    scause::{self, Exception, Trap},
-    stval, stvec,
+    scause::{self, Exception, Trap, Interrupt},
+    stval, stvec
 };
+use crate::syscall::process::sys_yield;
 use core::arch::asm;
 use crate::config::TRAMPOLINE;
 
@@ -31,11 +32,18 @@ pub fn init() {
     unsafe {
         stvec::write(TRAMPOLINE, TrapMode::Direct);
     }
+	
+}
+#[no_mangle]
+pub fn trap_from_kernel(){
+	panic!("kernel trap");
 }
 
 #[no_mangle]
 /// handle an interrupt, exception, or system call from user space
 pub unsafe fn trap_handler() -> ! {
+	stvec::write(trap_from_kernel as usize, TrapMode::Direct);
+	
 	let scause = scause::read(); // get trap cause
     let stval = stval::read(); // get extra value
 	// println!("USER TRAP: stval={:#x},pc={:#x}",stval,cx.sepc);
@@ -57,6 +65,10 @@ pub unsafe fn trap_handler() -> ! {
         Trap::Exception(Exception::IllegalInstruction) => {
             println!("[kernel] IllegalInstruction in application, kernel killed it.");
         }
+		Trap::Interrupt(Interrupt::SupervisorTimer) => {
+			set_next_trigger();
+			// sys_yield();
+		}
         _ => {
             panic!(
                 "Unsupported trap {:?}, stval = {:#x}!",
@@ -70,6 +82,7 @@ pub unsafe fn trap_handler() -> ! {
 
 #[no_mangle]
 pub unsafe fn trap_return() -> ! {
+	stvec::write(TRAMPOLINE as usize, TrapMode::Direct);
     let trapframe_ptr = TRAPFRAME;
     let user_satp = task_list.exclusive_access_const()[mycpu().proc_idx].memory_set.token();
     extern "C" {

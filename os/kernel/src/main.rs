@@ -5,8 +5,6 @@
 
 extern crate alloc;
 
-use lazy_static::*;
-use riscv::register::mcause::Trap;
 use sync::UPSafeCell;
 
 #[path = "boards/qemu.rs"]
@@ -25,15 +23,23 @@ mod task;
 
 pub mod syscall;
 pub mod trap;
+pub mod timer;
 use alloc::{vec,vec::Vec};
 use task::{cpu::mycpu, proc::schedule};
 use core::{arch::global_asm,arch::asm, str::Bytes, borrow::BorrowMut, slice};
-use crate::{sbi::{console_putchar, console_getchar, shutdown}, console::print, mm::{KERNEL_SPACE, MemorySet, translated_byte_buffer}, trap::{trap_handler, trap_return}, config::{TRAMPOLINE, KERNEL_STACK_SIZE, USER_STACK_SIZE}, task::{task_list, PCB, ProcessContext}};
+use crate::{sbi::{console_putchar, console_getchar, shutdown}, console::print, mm::{KERNEL_SPACE, MemorySet, translated_byte_buffer}, trap::{trap_handler, trap_return}, config::{TRAMPOLINE, KERNEL_STACK_SIZE, USER_STACK_SIZE}, task::{task_list, PCB, ProcessContext}, timer::{set_next_trigger, get_time}};
 use config::{TRAPFRAME};
 use xmas_elf::ElfFile;
 use trap::TrapFrame;
 use crate::mm::memory_set::{MapArea,MapType,MapPermission};
 use crate::mm::VirtAddr;
+
+use riscv::register::{
+    mtvec::TrapMode,
+    scause::{self, Exception, Interrupt, Trap},
+    sie, stval, stvec,
+};
+
 
 global_asm!(include_str!("entry.asm"));
 global_asm!(include_str!("user_bin.S"));
@@ -67,7 +73,6 @@ unsafe fn crate_task_from_elf(userbin:&[u8]){
 #[no_mangle]
 unsafe fn load_user_file(){
 	extern "C" {fn init_start();fn init_end();}
-
 	crate_task_from_elf(slice::from_raw_parts(init_start as *const u8, init_end as usize-init_start as usize));
 	// crate_task_from_elf(include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getpid"));
 	// crate_task_from_elf(include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getppid"));
@@ -82,6 +87,8 @@ pub fn rust_main() -> !{
 
 	trap::init();
 	mm::init();
+	unsafe {sie::set_stimer();}
+	set_next_trigger();
 	unsafe{
 		load_user_file();
 	}

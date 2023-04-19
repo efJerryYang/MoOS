@@ -9,7 +9,9 @@ char* user_c_name[]={
 char* testsuits_name[]={
 	"getpid",
 	"getppid",
-	"write"
+	"write",
+	"gettimeofday",
+	"sleep"
 };
 
 signed main(){

@@ -23,9 +23,9 @@ int getpid(void);
 int getppid(void);
 int sched_yield(void);
 int fork(void);
-int exec(void);
-//
-int brk(int len);//grow len and return the break point.
+int exec(char* path);
+int gettimeofday(*timespec ts,int ts);
+int nanosleep(const *timespec req,*timespec rem);
 ```
 ## yet to do:
 - file system

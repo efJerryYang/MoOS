@@ -34,12 +34,16 @@ pub unsafe fn sys_exec(buf:*mut u8)->isize{
 		fn getpid_start();fn getpid_end();
 		fn getppid_start();fn getppid_end();
 		fn write_start();fn write_end();
+		fn gettimeofday_start();fn gettimeofday_end();
+		fn sleep_start();fn sleep_end();
 	}
 	let elf_file=match(path.as_str()){
 		"shell"=>ElfFile::new(slice::from_raw_parts(shell_start as *const u8, shell_end as usize - shell_start as usize)),
 		"getpid"=>ElfFile::new(slice::from_raw_parts(getpid_start as *const u8, getpid_end as usize - getpid_start as usize)),
 		"getppid"=>ElfFile::new(slice::from_raw_parts(getppid_start as *const u8, getppid_end as usize - getppid_start as usize)),
 		"write"=>ElfFile::new(slice::from_raw_parts(write_start as *const u8, write_end as usize - write_start as usize)),
+		"gettimeofday"=>ElfFile::new(slice::from_raw_parts(gettimeofday_start as *const u8, gettimeofday_end as usize - gettimeofday_start as usize)),
+		"sleep"=>ElfFile::new(slice::from_raw_parts(sleep_start as *const u8, sleep_end as usize - sleep_start as usize)),
 		_ => {
 			println!("exec {} failed.",path);
 			kill();
