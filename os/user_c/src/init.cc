@@ -1,5 +1,5 @@
 #include "lib/unistd.h"
+#include "lib/stdio.c"
 signed main(){
-	sched_yield();
 	exec("shell");
 }

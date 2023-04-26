@@ -2,25 +2,29 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 7
+	.quad 9
 	.quad init_start
 	.quad shell_start
+	.quad forktest_start
 	.quad getpid_start
 	.quad getppid_start
 	.quad write_start
 	.quad gettimeofday_start
 	.quad sleep_start
-	.quad sleep_end
+	.quad busybox_start
+	.quad busybox_end
 
 	.globl _app_names
 _app_names:
 	.string "init"
 	.string "shell"
+	.string "forktest"
 	.string "getpid"
 	.string "getppid"
 	.string "write"
 	.string "gettimeofday"
 	.string "sleep"
+	.string "busybox"
 
 	.section .data
 	.global init_start
@@ -38,38 +42,53 @@ shell_start:
 	.incbin "../user_c/build/shell"
 shell_end:
 
+	.section .data
+	.global forktest_start
+	.global forktest_end
+	.align 3
+forktest_start:
+	.incbin "../user_c/build/forktest"
+forktest_end:
+
 	.global getpid_start
 	.global getpid_end
 	.align 3
 getpid_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/riscv64/getpid"
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getpid"
 getpid_end:
 
 	.global getppid_start
 	.global getppid_end
 	.align 3
 getppid_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/riscv64/getppid"
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getppid"
 getppid_end:
 
 	.global write_start
 	.global write_end
 	.align 3
 write_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/riscv64/write"
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/write"
 write_end:
 
 	.global gettimeofday_start
 	.global gettimeofday_end
 	.align 3
 gettimeofday_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/riscv64/gettimeofday"
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/gettimeofday"
 gettimeofday_end:
 
 	.global sleep_start
 	.global sleep_end
 	.align 3
 sleep_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/riscv64/sleep"
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/sleep"
 sleep_end:
+
+	.global busybox_start
+	.global busybox_end
+	.align 3
+busybox_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/busybox"
+busybox_end:
 

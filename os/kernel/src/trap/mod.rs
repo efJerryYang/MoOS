@@ -14,14 +14,13 @@
 
 mod context;
 
-use crate::{syscall::syscall, console::print, config::TRAPFRAME, task::{task_list, cpu::mycpu, proc::*}, timer::set_next_trigger};
+use crate::{syscall::syscall, config::TRAPFRAME, task::{task_list, cpu::mycpu, proc::*}, timer::set_next_trigger};
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
     scause::{self, Exception, Trap, Interrupt},
     stval, stvec
 };
-use crate::syscall::process::sys_yield;
 use core::arch::asm;
 use crate::config::TRAMPOLINE;
 
@@ -71,9 +70,10 @@ pub unsafe fn trap_handler() -> ! {
 		}
         _ => {
             panic!(
-                "Unsupported trap {:?}, stval = {:#x}!",
+                "Unsupported trap {:?}, stval = {:#x}!,pid={}",
                 scause.cause(),
-                stval
+                stval,
+				mycpu().proc_idx
             );
         }
     }

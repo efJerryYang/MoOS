@@ -26,6 +26,7 @@ run: build binary
 	qemu-system-riscv64 \
     -machine virt \
     -nographic \
+	-m 128\
     -bios ../../bootloader/rustsbi-qemu.bin \
     -device loader,file=$(TARGET_DIR)/os.bin,addr=0x80200000
 

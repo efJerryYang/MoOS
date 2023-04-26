@@ -4,6 +4,7 @@ using namespace std;
 char* user_c_name[]={
 	"init",
 	"shell",
+	"forktest"
 };
 
 char* testsuits_name[]={
@@ -11,7 +12,8 @@ char* testsuits_name[]={
 	"getppid",
 	"write",
 	"gettimeofday",
-	"sleep"
+	"sleep",
+	"busybox"
 };
 
 signed main(){
@@ -62,7 +64,8 @@ signed main(){
 		printf("	.global %s_end\n",s);
 		printf("	.align 3\n");
 		printf("%s_start:\n",s);
-		printf("	.incbin \"../../testsuits-for-oskernel/riscv-syscalls-testing/user/riscv64/%s\"\n",s);
+		// printf("	.incbin \"../testsuits/%s\"\n",s);
+		printf("	.incbin \"../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/%s\"\n",s);
 		printf("%s_end:\n",s);
 		printf("\n");
 	}

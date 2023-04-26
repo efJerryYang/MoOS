@@ -43,7 +43,7 @@ pub unsafe fn exec_from_elf(elf_file:&ElfFile)->isize{
 	let nowpid=mycpu().proc_idx;
 	let mut nowproc=&mut task_list.exclusive_access()[nowpid];
 	nowproc.trapframe_ppn=user_pagetable.translate(VirtAddr::from(TRAPFRAME).into()).unwrap().ppn();
-
+	println!("entry:{:#x}",entry);
 	*(nowproc.trapframe_ppn.get_mut() as *mut TrapFrame)=TrapFrame::app_init_context(
 		entry,
 		user_stack-8, 
