@@ -4,7 +4,8 @@ using namespace std;
 char* user_c_name[]={
 	"init",
 	"shell",
-	"forktest"
+	"forktest",
+	"argtest"
 };
 
 char* testsuits_name[]={

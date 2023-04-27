@@ -2,10 +2,11 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 9
+	.quad 10
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
+	.quad argtest_start
 	.quad getpid_start
 	.quad getppid_start
 	.quad write_start
@@ -19,6 +20,7 @@ _app_names:
 	.string "init"
 	.string "shell"
 	.string "forktest"
+	.string "argtest"
 	.string "getpid"
 	.string "getppid"
 	.string "write"
@@ -49,6 +51,14 @@ shell_end:
 forktest_start:
 	.incbin "../user_c/build/forktest"
 forktest_end:
+
+	.section .data
+	.global argtest_start
+	.global argtest_end
+	.align 3
+argtest_start:
+	.incbin "../user_c/build/argtest"
+argtest_end:
 
 	.global getpid_start
 	.global getpid_end

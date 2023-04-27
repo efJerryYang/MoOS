@@ -2,13 +2,18 @@
 #include "lib/unistd.h"
 #include "lib/stdio.c"
 #include "lib/string.c"
-char nuclear[]="fusion\n";
+char* argv[16];
 
 int plus(int a,int b){
 	return a+b;
 }
 char buf[199];
 signed main(){
+	argv[0]="arg0";
+	argv[1]="arg1";
+	argv[2]="arg2";
+	argv[3]="arg3";
+	argv[4]=0;
 	printf("----------shell started!---------\n");
 	int cc=0;
 	while(1){
@@ -42,11 +47,10 @@ signed main(){
 		}
 		int pid=fork();
 		if(pid==0){
-			exec(buf);
+			execve(buf,argv,0);
 		}else{
 			sched_yield();
 		}
 	}
-	exit(0);
-	// return 0;
+	return 0;
 }

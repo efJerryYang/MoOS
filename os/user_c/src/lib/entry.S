@@ -2,4 +2,5 @@
 .global _start
 
 _start:
-	tail main
+	mv a0,sp
+	tail entry_main

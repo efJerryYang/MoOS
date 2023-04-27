@@ -20,7 +20,7 @@ const SYSCALL_GETTIMEOFDAY: usize = 169;
 const SYSCALL_GETPID: usize = 172;
 const SYSCALL_GETPPID: usize = 173;
 const SYSCALL_FORK: usize = 220;
-const SYSCALL_EXEC: usize = 221;
+const SYSCALL_EXECVE: usize = 221;
 
 pub mod fs;
 pub mod process;
@@ -38,7 +38,7 @@ pub struct timespec{
 	tv_nsec: usize
 }
 
-fn translate(ptr: usize)-> usize{
+pub fn translate(ptr: usize)-> usize{
 	PageTable::from_token(task_list.exclusive_access()[mycpu().proc_idx].memory_set.token()).translate_va(VirtAddr::from(ptr as usize)).unwrap().get_mut() as *mut u8 as usize
 }
 
@@ -54,7 +54,7 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 		SYSCALL_GETPID => sys_getpid(),
 		SYSCALL_GETPPID => 2333,
 		SYSCALL_FORK => sys_fork(),
-		SYSCALL_EXEC => sys_exec(args[0] as *mut u8),
+		SYSCALL_EXECVE => sys_exec(args[0] as *mut u8,args[1] as usize),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

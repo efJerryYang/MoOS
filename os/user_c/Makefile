@@ -11,6 +11,6 @@ build:clean
 	mkdir build
 	echo $(ELFS)
 	$(foreach name, $(NAMES),\
-		riscv64-linux-gnu-g++-11 -w src/$(name).cc src/lib/entry.S src/lib/syscall.c -o build/$(name) -Wl,-T,src/lib/linker.ld -nostdlib&&\
+		riscv64-linux-gnu-g++-11 -w src/$(name).cc src/lib/entry_main.c src/lib/entry.S src/lib/syscall.c -o build/$(name) -Wl,-T,src/lib/linker.ld -nostdlib&&\
 		riscv64-linux-gnu-objdump -D build/$(name)  > build/$(name).asm;\
 	)
