@@ -53,10 +53,10 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 		SYSCALL_SCHED_YIELD=> sys_yield(),
 		SYSCALL_GETTIMEOFDAY=> sys_gettimeofday(args[0] as *mut usize),
 		SYSCALL_GETPID => sys_getpid(),
-		SYSCALL_GETPPID => 2333,
+		SYSCALL_GETPPID => sys_getppid(),
 		SYSCALL_FORK => sys_fork(),
 		SYSCALL_EXECVE => sys_exec(args[0] as *mut u8,args[1] as usize),
-		SYSCALL_WAITPID => sys_waitpid(args[0] as isize,translate(args[1]) as *mut isize,args[2]),
+		SYSCALL_WAITPID => sys_waitpid(args[0] as isize,if(args[1]==0){0}else{translate(args[1])} as *mut isize,args[2]),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

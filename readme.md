@@ -55,9 +55,6 @@ int nanosleep(const *timespec req,*timespec rem);
 
 ```c
 #define SYS_clone 220
-#define SYS_execve 221
-#define SYS_wait4 260
-
 ```
 
 ### Memory

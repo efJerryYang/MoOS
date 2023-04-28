@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 11
+	.quad 16
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -13,6 +13,11 @@ _app_num:
 	.quad gettimeofday_start
 	.quad sleep_start
 	.quad wait_start
+	.quad waitpid_start
+	.quad test_echo_start
+	.quad fork_start
+	.quad times_start
+	.quad yield_start
 	.quad busybox_start
 	.quad busybox_end
 
@@ -28,6 +33,11 @@ _app_names:
 	.string "gettimeofday"
 	.string "sleep"
 	.string "wait"
+	.string "waitpid"
+	.string "test_echo"
+	.string "fork"
+	.string "times"
+	.string "yield"
 	.string "busybox"
 
 	.section .data
@@ -103,6 +113,41 @@ sleep_end:
 wait_start:
 	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/wait"
 wait_end:
+
+	.global waitpid_start
+	.global waitpid_end
+	.align 3
+waitpid_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/waitpid"
+waitpid_end:
+
+	.global test_echo_start
+	.global test_echo_end
+	.align 3
+test_echo_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/test_echo"
+test_echo_end:
+
+	.global fork_start
+	.global fork_end
+	.align 3
+fork_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/fork"
+fork_end:
+
+	.global times_start
+	.global times_end
+	.align 3
+times_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/times"
+times_end:
+
+	.global yield_start
+	.global yield_end
+	.align 3
+yield_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/yield"
+yield_end:
 
 	.global busybox_start
 	.global busybox_end

@@ -8,16 +8,25 @@ use crate::{task::{task_list, proc::{sched, schedule, fork, exec_from_elf, kill}
 
 /// task exits and submit an exit code
 pub unsafe fn sys_exit(exit_code: i32) -> !{
-	task_list.exclusive_access()[mycpu().proc_idx].state=ProcessState::ZOMBIE;
-    println!("[kernel] process {} exited with code {}",mycpu().proc_idx, exit_code);
+	let proc=&mut task_list.exclusive_access()[mycpu().proc_idx];
+	proc.state=ProcessState::ZOMBIE;
+	proc.exit_code=exit_code as isize;
+	for child in task_list.exclusive_access(){
+		if(child.parent==proc.pid){
+			child.parent=0;
+		}
+	}
+    // println!("[kernel] process {} exited with code {}",mycpu().proc_idx, exit_code);
 	sched();
 	println!("exit unreachable part.");
 	loop{}
-	// panic!("[kernel]Application exited with code {}",exit_code);
 }
 
 pub unsafe fn sys_getpid()->isize{
 	mycpu().proc_idx as isize
+}
+pub unsafe fn sys_getppid()->isize{
+	task_list.exclusive_access()[mycpu().proc_idx].parent as isize
 }
 
 pub unsafe fn sys_fork()->isize{
@@ -69,7 +78,7 @@ pub unsafe fn sys_exec(buf:*mut u8,argv:usize)->isize{
 		((0..num).find(|&i|APP_NAMES[i]==path).map(get_location));
 	if(range==None) {
 		println!("can not find {}.",path);
-		kill();
+		sys_exit(-1);
 		return 1;
 	}
 
@@ -101,7 +110,9 @@ pub unsafe fn sys_waitpid(pid:isize,status:*mut isize,options: usize)->isize{
 			if(p==0xffffffff){
 				sys_yield();
 			}else{
-				*status=task_list.exclusive_access()[p].exit_code;
+				if(status as usize!=0){
+					*status=(task_list.exclusive_access()[p].exit_code<<8)|(0);
+				}
 				task_list.exclusive_access()[p].state=ProcessState::KILLED;
 				return p as isize;
 			}
@@ -114,7 +125,9 @@ pub unsafe fn sys_waitpid(pid:isize,status:*mut isize,options: usize)->isize{
 			while(x.state!=ProcessState::ZOMBIE){
 				sys_yield();
 			}
-			*status=x.exit_code;
+			if(status as usize!=0){
+				*status=(x.exit_code<<8)|(0);
+			}
 			x.state=ProcessState::KILLED;
 			return pid as isize;
 		}

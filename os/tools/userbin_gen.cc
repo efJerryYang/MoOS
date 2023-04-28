@@ -15,6 +15,11 @@ char* testsuits_name[]={
 	"gettimeofday",
 	"sleep",
 	"wait",
+	"waitpid",
+	"test_echo",
+	"fork",
+	"times",
+	"yield",
 	"busybox"
 };
 

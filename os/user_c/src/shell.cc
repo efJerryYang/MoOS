@@ -37,13 +37,8 @@ signed main(){
 		printf("\n");
 		if(strlen(buf)==0) continue;
 		if(!strcmp(buf,"exit")) break;
-		if(!strcmp(buf,"yield")){
+		if(!strcmp(buf,"syield")){
 			sched_yield();
-			continue;
-		}
-		if(!strcmp(buf,"fork")){
-			int pid=fork();
-			printf("fork returned %d.\n",pid);
 			continue;
 		}
 		int pid=fork();
@@ -52,7 +47,7 @@ signed main(){
 		}else{
 			int status;
 			wait(&status);
-			printf("[shell] exec exited with %d.\n",status);
+			printf("[shell] exec exited with %d.\n",status>>8);
 		}
 	}
 	return 0;

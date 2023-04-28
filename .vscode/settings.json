@@ -4,7 +4,10 @@
 		"syscall_ids.h": "c",
 		"stdio.c": "cpp",
 		"string.c": "cpp",
-		"atomic": "c"
+		"atomic": "c",
+		"unistd.h": "c",
+		"stdio.h": "c",
+		"stdlib.h": "c"
 	},
 	"rust-analyzer.linkedProjects": [
 		"/home/max/os/ftl-os/code/kernel/Cargo.toml",
