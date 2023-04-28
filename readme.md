@@ -25,16 +25,17 @@ Compile user programs:
 
 ```C
 
-int read(int fd, char* buf, int len);
-int write(int fd, const char* buf, int len);
+int read(int fd, char* buf, int len);//STDIN only
+int write(int fd, const char* buf, int len);//STDOUT only
 int exit(int code);
+int waitpid(int pid,int* stauts,int options);//options not implemented
 int getpid(void);
 int getppid(void);
 int sched_yield(void);
 int fork(void);
-int exec(char* path);
+int execve(char* path,char** argv,char** env);//env not implemented
 int gettimeofday(*timespec ts,int ts);
-int nanosleep(const *timespec req,*timespec rem);
+int nanosleep(const *timespec req,*timespec rem);//rem not implemented
 ```
 
 ## yet to do:
