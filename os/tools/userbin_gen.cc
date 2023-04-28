@@ -16,6 +16,8 @@ char* testsuits_name[]={
 	"sleep",
 	"wait",
 	"waitpid",
+	"exit",
+	"execve",
 	"test_echo",
 	"fork",
 	"times",

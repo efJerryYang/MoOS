@@ -36,7 +36,7 @@ signed main(){
 		*t=0;
 		printf("\n");
 		if(strlen(buf)==0) continue;
-		if(!strcmp(buf,"exit")) break;
+		if(!strcmp(buf,"sexit")) break;
 		if(!strcmp(buf,"syield")){
 			sched_yield();
 			continue;

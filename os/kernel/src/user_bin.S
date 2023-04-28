@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 16
+	.quad 18
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -14,6 +14,8 @@ _app_num:
 	.quad sleep_start
 	.quad wait_start
 	.quad waitpid_start
+	.quad exit_start
+	.quad execve_start
 	.quad test_echo_start
 	.quad fork_start
 	.quad times_start
@@ -34,6 +36,8 @@ _app_names:
 	.string "sleep"
 	.string "wait"
 	.string "waitpid"
+	.string "exit"
+	.string "execve"
 	.string "test_echo"
 	.string "fork"
 	.string "times"
@@ -120,6 +124,20 @@ wait_end:
 waitpid_start:
 	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/waitpid"
 waitpid_end:
+
+	.global exit_start
+	.global exit_end
+	.align 3
+exit_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/exit"
+exit_end:
+
+	.global execve_start
+	.global execve_end
+	.align 3
+execve_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/execve"
+execve_end:
 
 	.global test_echo_start
 	.global test_echo_end

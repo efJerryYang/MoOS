@@ -24,7 +24,6 @@ Compile user programs:
 ## supported system calls:
 
 ```C
-
 int read(int fd, char* buf, int len);//STDIN only
 int write(int fd, const char* buf, int len);//STDOUT only
 int exit(int code);
@@ -38,7 +37,24 @@ int gettimeofday(*timespec ts,int ts);
 int nanosleep(const *timespec req,*timespec rem);//rem not implemented
 ```
 
-## yet to do:
+## passed tests
+```C
+	"getpid",
+	"getppid",
+	"write",
+	"gettimeofday",
+	"sleep",
+	"wait",
+	"waitpid",
+	"exit",
+	"execve",
+	"test_echo",
+	"fork",
+	"times",
+	"yield",
+```
+
+# yet to do:
 
 ### File system
 
@@ -64,4 +80,10 @@ int nanosleep(const *timespec req,*timespec rem);//rem not implemented
 #define SYS_brk 214
 #define SYS_munmap 215
 #define SYS_mmap 222
+```
+
+### Tests
+``` C
+	"times",
+	...
 ```
