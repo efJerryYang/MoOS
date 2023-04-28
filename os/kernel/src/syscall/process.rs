@@ -1,12 +1,10 @@
 //! App management syscalls
 
-use core::{borrow::BorrowMut, fmt::Error, panic::PanicInfo, ptr::read_volatile};
-
 use alloc::{sync::Arc, boxed::Box, task, string::{String, ToString}, slice, vec::Vec};
 use lazy_static::lazy_static;
 use xmas_elf::ElfFile;
 
-use crate::{task::{pidcc, PCB, task_list, proc::{sched, schedule, fork, exec_from_elf, kill}, cpu::mycpu, ProcessState}, sync::UPSafeCell, mm::{translated_byte_buffer, page_table::translate_str}, syscall::translate};
+use crate::{task::{task_list, proc::{sched, schedule, fork, exec_from_elf, kill}, cpu::mycpu, ProcessState}, sync::UPSafeCell, mm::{translated_byte_buffer, page_table::translate_str}, syscall::translate};
 
 /// task exits and submit an exit code
 pub unsafe fn sys_exit(exit_code: i32) -> !{
@@ -61,21 +59,7 @@ fn get_location(id:usize)->(usize,usize){
 	}
 }
 
-pub unsafe fn sys_exec(buf:*mut u8,mut argv:usize)->isize{
-
-	// if(argv !=0){
-	// 	let i: usize=0;
-	// 	loop{
-	// 		let x=translate(argv) as *mut usize;
-	// 		println!("real:{:#x}",translate(argv));
-	// 		println!("value:{:#x}",*x);
-	// 		if *x==0 {break;}
-	// 		let str=*x as *mut u8;
-	// 		let ans=translate_str(task_list.exclusive_access()[mycpu().proc_idx].memory_set.token(),str);
-	// 		println!("{}\n",ans);
-	// 		argv+=8;
-	// 	}
-	// }
+pub unsafe fn sys_exec(buf:*mut u8,argv:usize)->isize{
 	let path=translate_str(task_list.exclusive_access()[mycpu().proc_idx].memory_set.token(), buf);
 	extern "C"{
 		fn _app_num();
@@ -96,8 +80,43 @@ pub unsafe fn sys_exec(buf:*mut u8,mut argv:usize)->isize{
 		Err(e)=>1,
 	}
 }
+
 pub unsafe fn sys_yield()->isize{
 	task_list.exclusive_access()[mycpu().proc_idx].state=ProcessState::READY;
 	sched();
 	0
+}
+
+pub unsafe fn sys_waitpid(pid:isize,status:*mut isize,options: usize)->isize{
+	let nowpid=mycpu().proc_idx;
+	if(pid==-1){
+		loop{
+			let mut p=0xffffffff;
+			for x in task_list.exclusive_access(){
+				if(x.state==ProcessState::ZOMBIE&&x.parent==nowpid){
+					p=x.pid;
+					break;
+				}
+			}
+			if(p==0xffffffff){
+				sys_yield();
+			}else{
+				*status=task_list.exclusive_access()[p].exit_code;
+				task_list.exclusive_access()[p].state=ProcessState::KILLED;
+				return p as isize;
+			}
+		}
+	}else{
+		let x=&mut task_list.exclusive_access()[pid as usize];
+		if(x.parent!=nowpid || (x.state==ProcessState::KILLED)) {
+			return -1;
+		}else{
+			while(x.state!=ProcessState::ZOMBIE){
+				sys_yield();
+			}
+			*status=x.exit_code;
+			x.state=ProcessState::KILLED;
+			return pid as isize;
+		}
+	}
 }

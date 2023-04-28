@@ -13,7 +13,8 @@ pub unsafe fn sys_gettimeofday(ptr: *mut usize)->isize{
 pub unsafe fn sys_nanosleep(req: *mut timespec,rem: *mut timespec)->isize{
 	let st=get_time_us();
 	let ed=st+(*req).tv_sec*1000000+(*req).tv_nsec;
-	while get_time_us()<ed {}
-	// sys_yield();
+	while get_time_us()<ed {
+		sys_yield();
+	}
 	return 0;
 }

@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 10
+	.quad 11
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -12,6 +12,7 @@ _app_num:
 	.quad write_start
 	.quad gettimeofday_start
 	.quad sleep_start
+	.quad wait_start
 	.quad busybox_start
 	.quad busybox_end
 
@@ -26,6 +27,7 @@ _app_names:
 	.string "write"
 	.string "gettimeofday"
 	.string "sleep"
+	.string "wait"
 	.string "busybox"
 
 	.section .data
@@ -94,6 +96,13 @@ gettimeofday_end:
 sleep_start:
 	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/sleep"
 sleep_end:
+
+	.global wait_start
+	.global wait_end
+	.align 3
+wait_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/wait"
+wait_end:
 
 	.global busybox_start
 	.global busybox_end

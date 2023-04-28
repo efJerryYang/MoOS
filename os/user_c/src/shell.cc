@@ -7,6 +7,7 @@ char* argv[16];
 int plus(int a,int b){
 	return a+b;
 }
+
 char buf[199];
 signed main(){
 	argv[0]="arg0";
@@ -49,7 +50,9 @@ signed main(){
 		if(pid==0){
 			execve(buf,argv,0);
 		}else{
-			sched_yield();
+			int status;
+			wait(&status);
+			printf("[shell] exec exited with %d.\n",status);
 		}
 	}
 	return 0;

@@ -14,6 +14,7 @@ char* testsuits_name[]={
 	"write",
 	"gettimeofday",
 	"sleep",
+	"wait",
 	"busybox"
 };
 

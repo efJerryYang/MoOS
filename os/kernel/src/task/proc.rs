@@ -1,24 +1,17 @@
-use core::{cell::RefMut, borrow::BorrowMut, future::Ready, task::Context, ptr::slice_from_raw_parts};
-
 use alloc::{task, vec::Vec};
-use riscv::register::mcause::Trap;
 use xmas_elf::ElfFile;
 
 use crate::{mm::{MemorySet, memory_set::{self, KERNEL_SPACE, MapPermission}, VirtAddr, translated_byte_buffer, page_table::{translate_str, PageTable}}, trap::{TrapFrame, trap_return, trap_handler}, config::{TRAPFRAME, TRAMPOLINE, KERNEL_STACK_SIZE}, syscall::translate};
 
-use super::{cpu::mycpu, task_list, PCB, ProcessState, __switch, ProcessContext, pidcc};
+use super::{cpu::mycpu, task_list, PCB, ProcessState, __switch, ProcessContext};
 
-// pub fn myproc()->&'static mut PCB{
-// 	&mut task_list.exclusive_access()[mycpu().proc_idx]
-// }
 
 pub unsafe fn fork()->usize{
 	let tasks=task_list.exclusive_access();
 	let pid=tasks.len();
 	tasks.push(PCB::new());
-	// let mut newproc=&mut tasks[pid];
-	// let mut nowproc=&mut tasks[mycpu().proc_idx];
 	let nowpid=mycpu().proc_idx;
+	tasks[pid].parent=nowpid;
 	tasks[pid].memory_set=MemorySet::from_existed_user(&tasks[nowpid].memory_set);
 	tasks[pid].trapframe_ppn=tasks[pid].memory_set.translate(VirtAddr::from(TRAPFRAME).into()).unwrap().ppn();
 	*(tasks[pid].trapframe_ppn.get_mut() as *mut TrapFrame)=*(tasks[nowpid].trapframe_ppn.get_mut() as *mut TrapFrame);
@@ -44,9 +37,6 @@ pub unsafe fn exec_from_elf(elf_file:&ElfFile,argv:usize)->isize{
 	let mut nowproc=&mut task_list.exclusive_access()[nowpid];
 	nowproc.trapframe_ppn=user_pagetable.translate(VirtAddr::from(TRAPFRAME).into()).unwrap().ppn();
 
-	// println!("[new proc]");
-	// println!("entry:{:#x}",entry);
-
 	let mut user_stack_kernel: usize=PageTable::from_token(user_pagetable.token()).translate_va(VirtAddr::from(user_stack-8)).unwrap().get_mut() as *mut u8 as usize+8;
 	
 	let mut argc =0;
@@ -66,10 +56,8 @@ pub unsafe fn exec_from_elf(elf_file:&ElfFile,argv:usize)->isize{
 			dst.copy_from_slice(src);
 			pos.push(user_stack);
 			argc+=1;
-			// println!("argv:{}",s);
 		}
 	}
-	// println!("argc:{:#x}",argc);
 
 	for i in 0..argc{
 		user_stack_kernel-=8;
@@ -112,7 +100,6 @@ pub unsafe fn schedule(){
 			if(pcb.state == ProcessState::READY){
 				pcb.state=ProcessState::RUNNING;
 				cpu.proc_idx=idx;
-				// println!("entering {}.",idx);
 				__switch(
 					&mut cpu.context as *mut ProcessContext,
 					&mut pcb.context as *mut ProcessContext
