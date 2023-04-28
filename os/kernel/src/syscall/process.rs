@@ -1,10 +1,12 @@
 //! App management syscalls
 
+use core::clone;
+
 use alloc::{sync::Arc, boxed::Box, task, string::{String, ToString}, slice, vec::Vec};
 use lazy_static::lazy_static;
 use xmas_elf::ElfFile;
 
-use crate::{task::{task_list, proc::{sched, schedule, fork, exec_from_elf, kill}, cpu::mycpu, ProcessState}, sync::UPSafeCell, mm::{translated_byte_buffer, page_table::translate_str}, syscall::translate};
+use crate::{task::{task_list, proc::{sched, schedule, exec_from_elf, kill, clone}, cpu::mycpu, ProcessState}, sync::UPSafeCell, mm::{translated_byte_buffer, page_table::translate_str}, syscall::translate};
 
 /// task exits and submit an exit code
 pub unsafe fn sys_exit(exit_code: i32) -> !{
@@ -29,8 +31,8 @@ pub unsafe fn sys_getppid()->isize{
 	task_list.exclusive_access()[mycpu().proc_idx].parent as isize
 }
 
-pub unsafe fn sys_fork()->isize{
-	return fork() as isize;
+pub unsafe fn sys_clone(stack:usize)->isize{
+	return clone(stack) as isize;
 }
 
 lazy_static! {

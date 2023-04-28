@@ -35,6 +35,7 @@ pub fn init() {
 }
 #[no_mangle]
 pub fn trap_from_kernel(){
+	println!("kernel trap");
 	panic!("kernel trap");
 }
 
@@ -68,10 +69,12 @@ pub unsafe fn trap_handler() -> ! {
 			// sys_yield();
 		}
         _ => {
+			let cx:&mut TrapFrame=task_list.exclusive_access()[mycpu().proc_idx].trapframe_ppn.get_mut();
             panic!(
-                "Unsupported trap {:?}, stval = {:#x}!,pid={}",
+                "Unsupported trap {:?}, stval = {:#x},spec = {:#x},pid = {}",
                 scause.cause(),
                 stval,
+				cx.sepc,
 				mycpu().proc_idx
             );
         }

@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 18
+	.quad 19
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -20,6 +20,7 @@ _app_num:
 	.quad fork_start
 	.quad times_start
 	.quad yield_start
+	.quad clone_start
 	.quad busybox_start
 	.quad busybox_end
 
@@ -42,6 +43,7 @@ _app_names:
 	.string "fork"
 	.string "times"
 	.string "yield"
+	.string "clone"
 	.string "busybox"
 
 	.section .data
@@ -166,6 +168,13 @@ times_end:
 yield_start:
 	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/yield"
 yield_end:
+
+	.global clone_start
+	.global clone_end
+	.align 3
+clone_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/clone"
+clone_end:
 
 	.global busybox_start
 	.global busybox_end

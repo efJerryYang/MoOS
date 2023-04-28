@@ -22,6 +22,7 @@ char* testsuits_name[]={
 	"fork",
 	"times",
 	"yield",
+	"clone",
 	"busybox"
 };
 

@@ -31,7 +31,7 @@ int waitpid(int pid,int* stauts,int options);//options not implemented
 int getpid(void);
 int getppid(void);
 int sched_yield(void);
-int fork(void);
+int clone(int flag,void* stack);
 int execve(char* path,char** argv,char** env);//env not implemented
 int gettimeofday(*timespec ts,int ts);
 int nanosleep(const *timespec req,*timespec rem);//rem not implemented
@@ -52,6 +52,8 @@ int nanosleep(const *timespec req,*timespec rem);//rem not implemented
 	"fork",
 	"times",
 	"yield",
+	"clone",
+	"yield",
 ```
 
 # yet to do:
@@ -71,7 +73,6 @@ int nanosleep(const *timespec req,*timespec rem);//rem not implemented
 ### Process
 
 ```c
-#define SYS_clone 220
 ```
 
 ### Memory

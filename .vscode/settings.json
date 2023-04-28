@@ -7,7 +7,8 @@
 		"atomic": "c",
 		"unistd.h": "c",
 		"stdio.h": "c",
-		"stdlib.h": "c"
+		"stdlib.h": "c",
+		"*.tcc": "c"
 	},
 	"rust-analyzer.linkedProjects": [
 		"/home/max/os/ftl-os/code/kernel/Cargo.toml",
