@@ -4,6 +4,7 @@ run:
 	cd os/kernel;make run
 
 all:
+	rm -r os/kernel/.cargo
 	cp -r os/kernel/cargo-judge os/kernel/.cargo
 	cd os/user_c;make build
 	cd os/kernel;make binary
