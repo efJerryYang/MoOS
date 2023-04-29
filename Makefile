@@ -10,6 +10,7 @@ all:
 	cd os/kernel;make binary
 	cp os/kernel/target/riscv64gc-unknown-none-elf/release/os.bin kernel-qemu
 	cp bootloader/rustsbi-qemu.bin sbi-qemu
+	touch initrd.img
 
 qemu: all
 	qemu-system-riscv64 \

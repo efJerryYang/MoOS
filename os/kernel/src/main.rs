@@ -37,7 +37,7 @@ use crate::mm::VirtAddr;
 use riscv::register::{
     mtvec::TrapMode,
     scause::{self, Exception, Interrupt, Trap},
-    sie, stval, stvec,
+    sie, stval, stvec, mhartid,
 };
 
 
