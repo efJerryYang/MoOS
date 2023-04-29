@@ -24,7 +24,7 @@ binary:build
 asm:build
 	$(OBJDUMP) -D $(ELF) > debug/os.asm
 
-run: userbin build binary
+run: userbin binary
 	qemu-system-riscv64 \
     -machine virt \
     -nographic \
