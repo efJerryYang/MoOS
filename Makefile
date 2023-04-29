@@ -18,4 +18,5 @@ qemu: all
 	-smp 2 \
 	-m 128\
     -bios sbi-qemu \
-    -device loader,file=kernel-qemu,addr=0x80200000
+	-kernel kernel-qemu
+    # -device loader,file=kernel-qemu,addr=0x80200000
