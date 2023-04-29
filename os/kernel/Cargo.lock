@@ -137,6 +137,7 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "libc"
 version = "0.2.142"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -149,6 +150,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b64f40e5e03e0d54f03845c8197d0291253cdbedfb1cb46b13c2c117554a9f4c"
 
 [[package]]
+=======
+>>>>>>> 96b6fa2 (brk)
 name = "lock_api"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -185,8 +188,11 @@ dependencies = [
  "riscv",
  "sbi-rt",
  "spin 0.9.8",
+<<<<<<< HEAD
  "tempfile",
  "winapi",
+=======
+>>>>>>> 96b6fa2 (brk)
  "xmas-elf",
 ]
 

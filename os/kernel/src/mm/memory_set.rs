@@ -36,7 +36,11 @@ lazy_static! {
 /// memory set structure, controls virtual-memory space
 pub struct MemorySet {
     pub page_table: PageTable,
+<<<<<<< HEAD
     areas: Vec<MapArea>,
+=======
+    pub areas: Vec<MapArea>,
+>>>>>>> 96b6fa2 (brk)
 }
 
 impl MemorySet {
@@ -282,6 +286,12 @@ impl MemorySet {
             }
         }
         memory_set
+    }
+    pub fn get_areas_end(&self) -> VirtPageNum{
+        return self.areas.last().unwrap().vpn_range.get_end();
+    }
+    pub fn get_areas(&self) -> &Vec<MapArea>{
+        return &self.areas;
     }
 }
 

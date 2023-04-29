@@ -19,17 +19,22 @@ const SYSCALL_SCHED_YIELD: usize = 124;
 const SYSCALL_GETTIMEOFDAY: usize = 169;
 const SYSCALL_GETPID: usize = 172;
 const SYSCALL_GETPPID: usize = 173;
+const SYSCALL_BRK: 	usize = 214;
+const SYSCALL_MUNMAP:	usize = 215;
 const SYSCALL_CLONE: usize = 220;
 const SYSCALL_EXECVE: usize = 221;
+const SYSCALL_MMAP:	usize = 222;
 const SYSCALL_WAITPID: usize = 260;
 
 pub mod fs;
 pub mod process;
 pub mod interrupt;
+pub mod mm;
 
 use fs::*;
 use process::*;
 use interrupt::*;
+use mm::*;
 
 use crate::{task::{cpu::mycpu, task_list}, mm::{VirtAddr, page_table::PageTable}};
 
@@ -57,6 +62,9 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 		SYSCALL_CLONE => sys_clone(args[1]),
 		SYSCALL_EXECVE => sys_exec(args[0] as *mut u8,args[1] as usize),
 		SYSCALL_WAITPID => sys_waitpid(args[0] as isize,if(args[1]==0){0}else{translate(args[1])} as *mut isize,args[2]),
+		SYSCALL_BRK => sys_brk(args[0]),
+		SYSCALL_MMAP => sys_mmap(),
+		SYSCALL_MUNMAP => sys_munmap(),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

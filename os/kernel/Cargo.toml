@@ -12,6 +12,7 @@ bitflags = "1.2.1"
 buddy_system_allocator = "0.6"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 sbi-rt = { version = "0.0.2", features = ["legacy"] }
+<<<<<<< HEAD
 spin = "0.9"
 libc = { version = "0.2", optional = true }
 
@@ -24,3 +25,6 @@ winapi = "0.3"
 
 [features]
 std = ["libc"]
+=======
+spin = "0.9.8"
+>>>>>>> 96b6fa2 (brk)

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 	.align 3
 	.section .data
 	.globl _app_num
@@ -183,3 +184,5 @@ busybox_start:
 	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/busybox"
 busybox_end:
 
+=======
+>>>>>>> 96b6fa2 (brk)
