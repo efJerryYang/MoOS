@@ -5,7 +5,8 @@ char* user_c_name[]={
 	"init",
 	"shell",
 	"forktest",
-	"argtest"
+	"argtest",
+	"runtest"
 };
 
 char* testsuits_name[]={
@@ -23,6 +24,7 @@ char* testsuits_name[]={
 	"times",
 	"yield",
 	"clone",
+	"umount",
 	"busybox"
 };
 
@@ -75,7 +77,7 @@ signed main(){
 		printf("	.align 3\n");
 		printf("%s_start:\n",s);
 		// printf("	.incbin \"../testsuits/%s\"\n",s);
-		printf("	.incbin \"../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/%s\"\n",s);
+		printf("	.incbin \"../testbin/%s\"\n",s);
 		printf("%s_end:\n",s);
 		printf("\n");
 	}

@@ -7,9 +7,10 @@ char* argv[16];
 int plus(int a,int b){
 	return a+b;
 }
-
+// char ss[]="23333";
 char buf[199];
 signed main(){
+	// printf("%s",ss);
 	argv[0]="arg0";
 	argv[1]="arg1";
 	argv[2]="arg2";

@@ -11,6 +11,8 @@
 //! submodules, and you should also implement syscalls this way.
 
 const SYSCALL_GETCWD: usize = 17;
+const SYSCALL_UMOUNT: usize = 39;
+const SYSCALL_MOUNT: usize = 40;
 const SYSCALL_READ: usize = 63;
 const SYSCALL_WRITE: usize = 64;
 const SYSCALL_EXIT: usize = 93;
@@ -57,6 +59,9 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 		SYSCALL_CLONE => sys_clone(args[1]),
 		SYSCALL_EXECVE => sys_exec(args[0] as *mut u8,args[1] as usize),
 		SYSCALL_WAITPID => sys_waitpid(args[0] as isize,if(args[1]==0){0}else{translate(args[1])} as *mut isize,args[2]),
+		SYSCALL_UMOUNT => 0,
+		SYSCALL_MOUNT => 0,
+
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }
