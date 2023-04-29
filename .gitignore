@@ -2,3 +2,5 @@ os/kernel/target
 os/user_c/build
 .vscode
 testsuits-for-oskernel
+kernel-qemu
+sbi-qemu
