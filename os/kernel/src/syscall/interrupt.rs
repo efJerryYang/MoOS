@@ -17,3 +17,7 @@ pub unsafe fn sys_nanosleep(req: *mut timespec,rem: *mut timespec)->isize{
 	}
 	return 0;
 }
+
+pub unsafe fn sys_times(tms:usize)->isize{
+	0
+}

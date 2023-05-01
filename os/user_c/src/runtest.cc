@@ -29,6 +29,7 @@ signed main(){
 			execve(testsuits_name[i],0,0);
 		}else wait(0);
 	}
-	execve("shell",0,0);
+	// execve("shell",0,0);
+	close(0);
 	return 0;
 }

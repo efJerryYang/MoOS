@@ -28,7 +28,7 @@ pub mod trap;
 pub mod timer;
 use alloc::{vec,vec::Vec, sync::Arc, boxed::Box};
 use task::{cpu::mycpu, proc::schedule};
-use core::{arch::global_asm,arch::asm, str::Bytes, borrow::{BorrowMut, Borrow}, slice::{self, SliceIndex}, cell::{RefCell, Ref}, sync::atomic::{AtomicUsize, Ordering, AtomicBool}};
+use core::{arch::global_asm,arch::asm, str::Bytes, borrow::{BorrowMut, Borrow}, slice::{self, SliceIndex}, cell::{RefCell, Ref}, sync::atomic::{AtomicUsize, Ordering, AtomicBool, AtomicU8}};
 use crate::{sbi::{console_putchar, console_getchar, shutdown}, console::print, mm::{KERNEL_SPACE, MemorySet, translated_byte_buffer}, trap::{trap_handler, trap_return}, config::{TRAMPOLINE, KERNEL_STACK_SIZE, USER_STACK_SIZE}, task::{task_list, PCB, ProcessContext}, timer::{set_next_trigger, get_time}};
 use config::{TRAPFRAME};
 use xmas_elf::ElfFile;
@@ -85,21 +85,13 @@ unsafe fn load_user_file(){
 // lazy_static!{
 // 	pub static ref HART_CC:UPSafeCell<usize>=unsafe{UPSafeCell::new(0)};
 // }
-static HART_CC:AtomicUsize=AtomicUsize::new(0);
-static LOCK:AtomicBool=AtomicBool::new(false);
+static LOCK:AtomicU8=AtomicU8::new(0);
 
 #[no_mangle]
 pub fn rust_main() -> !{
 	clear_bss();
-	while(LOCK.compare_and_swap(false,true,Ordering::Acquire)){}
-		println!("-----------NAIVE-OS-----------");
-		let x=HART_CC.fetch_add(233,Ordering::SeqCst);
-		println!("hart_id:{}",x);
-	LOCK.store(false, Ordering::Release);
-	if(x!=0) {
-		loop{}
-	}
-
+	while(LOCK.compare_and_swap(0,1,Ordering::SeqCst)==1){}
+	println!("-----------NAIVE-OS-----------");
 	trap::init();
 	mm::init();
 	unsafe {sie::set_stimer();}
