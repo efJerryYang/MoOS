@@ -90,8 +90,9 @@ static LOCK:AtomicU8=AtomicU8::new(0);
 #[no_mangle]
 pub fn rust_main() -> !{
 	clear_bss();
-	while(LOCK.compare_and_swap(0,1,Ordering::SeqCst)==1){}
+	while(!LOCK.compare_exchange(0,1,Ordering::SeqCst,Ordering::SeqCst).is_ok()){}
 	println!("-----------NAIVE-OS-----------");
+	loop{}
 	trap::init();
 	mm::init();
 	unsafe {sie::set_stimer();}
