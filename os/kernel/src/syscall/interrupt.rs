@@ -7,7 +7,6 @@ pub unsafe fn sys_gettimeofday(ptr: *mut usize)->isize{
 	let ts=get_time_us();
 	*t=ts/1000000;
 	*(t.add(1))=ts%1000000;
-	set_next_trigger();
 	return 0;
 }
 pub unsafe fn sys_nanosleep(req: *mut timespec,rem: *mut timespec)->isize{

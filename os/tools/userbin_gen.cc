@@ -19,13 +19,11 @@ char* testsuits_name[]={
 	"waitpid",
 	"exit",
 	"execve",
-	"test_echo",
 	"fork",
-	"times",
 	"yield",
 	"clone",
-	"umount",
-	"busybox"
+	"mount",
+	"umount"
 };
 
 signed main(){

@@ -15,8 +15,10 @@ char testsuits_name[][49]={
 	"execve",
 	"test_echo",
 	"fork",
+	"times",
 	"yield",
 	"clone",
+	"mount",
 	"umount"
 };
 signed main(){
@@ -25,9 +27,8 @@ signed main(){
 	for(int i=0;i<test_cc;i++){
 		if(fork()==0){
 			execve(testsuits_name[i],0,0);
-		}else{
-			wait(0);
-		}
+		}else wait(0);
 	}
+	execve("shell",0,0);
 	return 0;
 }

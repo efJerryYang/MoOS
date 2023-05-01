@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 21
+	.quad 19
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -17,14 +17,12 @@ _app_num:
 	.quad waitpid_start
 	.quad exit_start
 	.quad execve_start
-	.quad test_echo_start
 	.quad fork_start
-	.quad times_start
 	.quad yield_start
 	.quad clone_start
+	.quad mount_start
 	.quad umount_start
-	.quad busybox_start
-	.quad busybox_end
+	.quad umount_end
 
 	.globl _app_names
 _app_names:
@@ -42,13 +40,11 @@ _app_names:
 	.string "waitpid"
 	.string "exit"
 	.string "execve"
-	.string "test_echo"
 	.string "fork"
-	.string "times"
 	.string "yield"
 	.string "clone"
+	.string "mount"
 	.string "umount"
-	.string "busybox"
 
 	.section .data
 	.global init_start
@@ -153,26 +149,12 @@ execve_start:
 	.incbin "../testbin/execve"
 execve_end:
 
-	.global test_echo_start
-	.global test_echo_end
-	.align 3
-test_echo_start:
-	.incbin "../testbin/test_echo"
-test_echo_end:
-
 	.global fork_start
 	.global fork_end
 	.align 3
 fork_start:
 	.incbin "../testbin/fork"
 fork_end:
-
-	.global times_start
-	.global times_end
-	.align 3
-times_start:
-	.incbin "../testbin/times"
-times_end:
 
 	.global yield_start
 	.global yield_end
@@ -188,17 +170,17 @@ clone_start:
 	.incbin "../testbin/clone"
 clone_end:
 
+	.global mount_start
+	.global mount_end
+	.align 3
+mount_start:
+	.incbin "../testbin/mount"
+mount_end:
+
 	.global umount_start
 	.global umount_end
 	.align 3
 umount_start:
 	.incbin "../testbin/umount"
 umount_end:
-
-	.global busybox_start
-	.global busybox_end
-	.align 3
-busybox_start:
-	.incbin "../testbin/busybox"
-busybox_end:
 
