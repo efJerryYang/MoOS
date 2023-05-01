@@ -16,7 +16,7 @@ const SYSCALL_MOUNT: usize = 40;
 const SYSCALL_READ: usize = 63;
 const SYSCALL_WRITE: usize = 64;
 const SYSCALL_EXIT: usize = 93;
-const SYS_NANOSLEEP: usize =101;
+const SYSCALL_NANOSLEEP: usize =101;
 const SYSCALL_SCHED_YIELD: usize = 124;
 const SYSCALL_GETTIMEOFDAY: usize = 169;
 const SYSCALL_GETPID: usize = 172;
@@ -50,7 +50,7 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     match syscall_id {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
         SYSCALL_EXIT => sys_exit(args[0] as i32),
-		SYS_NANOSLEEP => sys_nanosleep(translate(args[0]) as *mut timespec,translate(args[1]) as *mut timespec),
+		SYSCALL_NANOSLEEP => sys_nanosleep(translate(args[0]) as *mut timespec,translate(args[1]) as *mut timespec),
 		SYSCALL_READ => sys_read(args[0], args[1] as *mut u8, args[2]),
 		SYSCALL_SCHED_YIELD=> sys_yield(),
 		SYSCALL_GETTIMEOFDAY=> sys_gettimeofday(args[0] as *mut usize),
