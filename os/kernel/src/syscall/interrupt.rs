@@ -18,6 +18,11 @@ pub unsafe fn sys_nanosleep(req: *mut timespec,rem: *mut timespec)->isize{
 	return 0;
 }
 
-pub unsafe fn sys_times(tms:usize)->isize{
+pub unsafe fn sys_times(tms_addr:usize)->isize{
+	let mut tms= tms_addr as *mut usize;
+	*tms.add(0)=task_list.exclusive_access()[mycpu().proc_idx].utime;
+	*tms.add(1)=task_list.exclusive_access()[mycpu().proc_idx].ktime;
+	*tms.add(2)=0;
+	*tms.add(3)=0;
 	0
 }

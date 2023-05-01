@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 19
+	.quad 20
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -15,6 +15,7 @@ _app_num:
 	.quad sleep_start
 	.quad wait_start
 	.quad waitpid_start
+	.quad times_start
 	.quad exit_start
 	.quad execve_start
 	.quad fork_start
@@ -38,6 +39,7 @@ _app_names:
 	.string "sleep"
 	.string "wait"
 	.string "waitpid"
+	.string "times"
 	.string "exit"
 	.string "execve"
 	.string "fork"
@@ -134,6 +136,13 @@ wait_end:
 waitpid_start:
 	.incbin "../testbin/waitpid"
 waitpid_end:
+
+	.global times_start
+	.global times_end
+	.align 3
+times_start:
+	.incbin "../testbin/times"
+times_end:
 
 	.global exit_start
 	.global exit_end

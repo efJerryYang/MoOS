@@ -34,6 +34,7 @@ pub struct PCB{
 	pub memory_set: MemorySet,
 	pub parent: usize,
 	pub exit_code:isize,
+	pub otime:usize,
 	pub utime:usize,
 	pub ktime:usize,
 }
@@ -49,6 +50,7 @@ impl PCB{
 			parent: 0xffffffff,
 			exit_code:0,
 			utime:0,
+			otime:0,
 			ktime:0
 		}
 	}
