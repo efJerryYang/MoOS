@@ -109,12 +109,12 @@ pub unsafe fn schedule(){
 		let mut idx=0;
 		loop{
 			let mut pcb=&mut tasks[idx] ;
-			if(pcb.state == ProcessState::ZOMBIE){
-				tasks.remove(idx);
-				println!("now clear task {}", idx);
-				continue;
-			}
-			else if(pcb.state == ProcessState::READY){
+			// if(pcb.state == ProcessState::ZOMBIE){
+			// 	tasks.remove(idx);
+			// 	println!("now clear task {}", idx);
+			// 	continue;
+			// }
+			if(pcb.state == ProcessState::READY){
 				pcb.state=ProcessState::RUNNING;
 				cpu.proc_idx=idx;
 				__switch(

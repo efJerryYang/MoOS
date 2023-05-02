@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 20
+	.quad 22
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -19,6 +19,7 @@ _app_num:
 	.quad exit_start
 	.quad brk_start
 	.quad execve_start
+	.quad test_echo_start
 	.quad fork_start
 	.quad yield_start
 	.quad clone_start
@@ -44,6 +45,7 @@ _app_names:
 	.string "exit"
 	.string "brk"
 	.string "execve"
+	.string "test_echo"
 	.string "fork"
 	.string "yield"
 	.string "clone"
@@ -157,7 +159,7 @@ exit_end:
 	.global brk_end
 	.align 3
 brk_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/brk"
+	.incbin "../testbin/brk"
 brk_end:
 
 	.global execve_start
@@ -166,6 +168,13 @@ brk_end:
 execve_start:
 	.incbin "../testbin/execve"
 execve_end:
+
+	.global test_echo_start
+	.global test_echo_end
+	.align 3
+test_echo_start:
+	.incbin "../testbin/test_echo"
+test_echo_end:
 
 	.global fork_start
 	.global fork_end

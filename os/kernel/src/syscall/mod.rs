@@ -68,7 +68,7 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 		SYSCALL_TIMES=> sys_times(translate(args[0])),
 		SYSCALL_UMOUNT => 0,
 		SYSCALL_MOUNT => 0,
-
+		SYSCALL_BRK => sys_brk(args[0]),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }
