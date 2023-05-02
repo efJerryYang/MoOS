@@ -28,7 +28,8 @@ const SYSCALL_CLONE: usize = 220;
 const SYSCALL_EXECVE: usize = 221;
 const SYSCALL_MMAP:	usize = 222;
 const SYSCALL_WAITPID: usize = 260;
-
+const SYSCALL_OPENAT: usize = 56;
+const SYSCALL_CLOSE: usize = 57;
 pub mod fs;
 pub mod process;
 pub mod interrupt;
@@ -39,7 +40,7 @@ use process::*;
 use interrupt::*;
 use mm::*;
 
-use crate::{task::{cpu::mycpu, task_list}, mm::{VirtAddr, page_table::PageTable}};
+use crate::{task::{cpu::mycpu, task_list}, mm::{VirtAddr, page_table::{PageTable, translate_str}}};
 
 #[repr(C)]
 pub struct timespec{
@@ -69,6 +70,12 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 		SYSCALL_UMOUNT => 0,
 		SYSCALL_MOUNT => 0,
 		SYSCALL_BRK => sys_brk(args[0]),
+		SYSCALL_OPENAT => sys_openat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2] as isize),
+		SYSCALL_CLOSE => sys_close(args[0] as isize),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }
+
+pub fn get_token() -> usize {
+		task_list.exclusive_access()[mycpu().proc_idx].memory_set.token()
+	}

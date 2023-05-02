@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 22
+	.quad 26
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -10,7 +10,11 @@ _app_num:
 	.quad runtest_start
 	.quad getpid_start
 	.quad getppid_start
+	.quad read_start
 	.quad write_start
+	.quad openat_start
+	.quad open_start
+	.quad close_start
 	.quad gettimeofday_start
 	.quad sleep_start
 	.quad wait_start
@@ -36,7 +40,11 @@ _app_names:
 	.string "runtest"
 	.string "getpid"
 	.string "getppid"
+	.string "read"
 	.string "write"
+	.string "openat"
+	.string "open"
+	.string "close"
 	.string "gettimeofday"
 	.string "sleep"
 	.string "wait"
@@ -106,12 +114,40 @@ getppid_start:
 	.incbin "../testbin/getppid"
 getppid_end:
 
+	.global read_start
+	.global read_end
+	.align 3
+read_start:
+	.incbin "../testbin/read"
+read_end:
+
 	.global write_start
 	.global write_end
 	.align 3
 write_start:
 	.incbin "../testbin/write"
 write_end:
+
+	.global openat_start
+	.global openat_end
+	.align 3
+openat_start:
+	.incbin "../testbin/openat"
+openat_end:
+
+	.global open_start
+	.global open_end
+	.align 3
+open_start:
+	.incbin "../testbin/open"
+open_end:
+
+	.global close_start
+	.global close_end
+	.align 3
+close_start:
+	.incbin "../testbin/close"
+close_end:
 
 	.global gettimeofday_start
 	.global gettimeofday_end

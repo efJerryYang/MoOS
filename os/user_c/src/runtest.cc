@@ -19,7 +19,10 @@ char testsuits_name[][49]={
 	"yield",
 	"clone",
 	"mount",
-	"umount"
+	"umount",
+	"openat",
+	"open",
+	"close",
 };
 signed main(){
 	int test_cc=sizeof(testsuits_name)/49;

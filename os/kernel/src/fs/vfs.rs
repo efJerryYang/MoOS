@@ -264,7 +264,7 @@ pub struct Metadata {
     pub rdev: usize, // (major << 8) | minor
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
 pub struct Timespec {
     pub sec: i64,
     pub nsec: i32,
