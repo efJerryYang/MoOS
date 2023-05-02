@@ -9,8 +9,15 @@ use crate::{task::{task_list, cpu::mycpu}, mm::{MapPermission, VirtAddr, VirtPag
 pub fn sys_brk(_brk: usize) -> isize {
     let tasks = task_list.exclusive_access();
     let end_ = tasks[mycpu().proc_idx].memory_set.get_areas_end();
-    let old_end = usize::from(VirtAddr::from(end_)) + PAGE_SIZE;
+    let old_end = usize::from(VirtAddr::from(end_)) + PAGE_SIZE - 1;
     //let new_end = ((_brk - 1 + PAGE_SIZE) / PAGE_SIZE) << PAGE_SIZE_BITS;
+
+    if(_brk == 0){
+        // for v in tasks[mycpu().proc_idx].memory_set.areas.iter(){
+        //     println!("{} {}", usize::from(v.vpn_range.get_start()), usize::from(v.vpn_range.get_end()));
+        // }
+        return old_end as isize;
+    }
     
 
     if(old_end == _brk){
@@ -19,9 +26,12 @@ pub fn sys_brk(_brk: usize) -> isize {
     else if(old_end < _brk){
         let mset = &mut tasks[mycpu().proc_idx].memory_set;
         let flag = mset.append_to(
-            mset.get_areas().last().unwrap().vpn_range.get_start().into(), 
+            VirtAddr::from(mset.areas.get(mset.areas.len() - 2).unwrap().vpn_range.get_start()), 
             VirtAddr::from(_brk)
         );
+        // for v in mset.areas.iter(){
+        //     println!("{} {}", usize::from(v.vpn_range.get_start()), usize::from(v.vpn_range.get_end()));
+        // }
         if flag{
             return 0;
         }
@@ -33,7 +43,7 @@ pub fn sys_brk(_brk: usize) -> isize {
         // need to change
         let mset = &mut tasks[mycpu().proc_idx].memory_set;
         let flag = mset.shrink_to(
-            mset.get_areas().last().unwrap().vpn_range.get_start().into(), 
+            VirtAddr::from(mset.areas.get(mset.areas.len() - 2).unwrap().vpn_range.get_start()), 
             VirtAddr::from(_brk)
         );
         if flag{
