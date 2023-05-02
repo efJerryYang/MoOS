@@ -1,9 +1,8 @@
-<<<<<<< HEAD
 	.align 3
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 19
+	.quad 20
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -16,6 +15,7 @@ _app_num:
 	.quad wait_start
 	.quad waitpid_start
 	.quad exit_start
+	.quad brk_start
 	.quad execve_start
 	.quad test_echo_start
 	.quad fork_start
@@ -39,6 +39,7 @@ _app_names:
 	.string "wait"
 	.string "waitpid"
 	.string "exit"
+	.string "brk"
 	.string "execve"
 	.string "test_echo"
 	.string "fork"
@@ -135,6 +136,13 @@ exit_start:
 	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/exit"
 exit_end:
 
+	.global brk_start
+	.global brk_end
+	.align 3
+brk_start:
+	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/brk"
+brk_end:
+
 	.global execve_start
 	.global execve_end
 	.align 3
@@ -184,5 +192,3 @@ busybox_start:
 	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/busybox"
 busybox_end:
 
-=======
->>>>>>> 96b6fa2 (brk)
