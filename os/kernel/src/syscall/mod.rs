@@ -22,6 +22,8 @@ const SYSCALL_GETPPID: usize = 173;
 const SYSCALL_CLONE: usize = 220;
 const SYSCALL_EXECVE: usize = 221;
 const SYSCALL_WAITPID: usize = 260;
+const SYSCALL_OPENAT: usize = 56;
+const SYSCALL_CLOSE: usize = 57;
 
 pub mod fs;
 pub mod process;
@@ -31,7 +33,7 @@ use fs::*;
 use process::*;
 use interrupt::*;
 
-use crate::{task::{cpu::mycpu, task_list}, mm::{VirtAddr, page_table::PageTable}};
+use crate::{task::{cpu::mycpu, task_list}, mm::{VirtAddr, page_table::{PageTable, translate_str}}};
 
 #[repr(C)]
 pub struct timespec{
@@ -41,6 +43,10 @@ pub struct timespec{
 
 pub fn translate(ptr: usize)-> usize{
 	PageTable::from_token(task_list.exclusive_access()[mycpu().proc_idx].memory_set.token()).translate_va(VirtAddr::from(ptr as usize)).unwrap().get_mut() as *mut u8 as usize
+}
+
+pub fn get_token() -> usize {
+	task_list.exclusive_access()[mycpu().proc_idx].memory_set.token()
 }
 
 /// handle syscall exception with `syscall_id` and other arguments
@@ -56,7 +62,9 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 		SYSCALL_GETPPID => sys_getppid(),
 		SYSCALL_CLONE => sys_clone(args[1]),
 		SYSCALL_EXECVE => sys_exec(args[0] as *mut u8,args[1] as usize),
-		SYSCALL_WAITPID => sys_waitpid(args[0] as isize,if(args[1]==0){0}else{translate(args[1])} as *mut isize,args[2]),
+		SYSCALL_WAITPID => sys_waitpid(args[0] as isize,if args[1]==0 {0} else {translate(args[1])} as *mut isize,args[2]),
+		SYSCALL_OPENAT => sys_openat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2] as isize),
+		SYSCALL_CLOSE => sys_close(args[0] as isize),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

@@ -11,7 +11,11 @@ char* user_c_name[]={
 char* testsuits_name[]={
 	"getpid",
 	"getppid",
+	"read",
 	"write",
+	"openat",
+	"close",
+	"open",
 	"gettimeofday",
 	"sleep",
 	"wait",
