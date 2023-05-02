@@ -79,7 +79,7 @@ pub unsafe fn sys_exec(buf:*mut u8,argv:usize)->isize{
 	let range=
 		((0..num).find(|&i|APP_NAMES[i]==path).map(get_location));
 	if(range==None) {
-		println!("can not find {}.",path);
+		println!("{} : not found.",path);
 		sys_exit(-1);
 		return 1;
 	}

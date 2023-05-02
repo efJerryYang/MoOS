@@ -7,6 +7,7 @@ _app_num:
 	.quad shell_start
 	.quad forktest_start
 	.quad argtest_start
+	.quad runtest_start
 	.quad getpid_start
 	.quad getppid_start
 	.quad write_start
@@ -14,16 +15,16 @@ _app_num:
 	.quad sleep_start
 	.quad wait_start
 	.quad waitpid_start
+	.quad times_start
 	.quad exit_start
 	.quad brk_start
 	.quad execve_start
-	.quad test_echo_start
 	.quad fork_start
-	.quad times_start
 	.quad yield_start
 	.quad clone_start
-	.quad busybox_start
-	.quad busybox_end
+	.quad mount_start
+	.quad umount_start
+	.quad umount_end
 
 	.globl _app_names
 _app_names:
@@ -31,6 +32,7 @@ _app_names:
 	.string "shell"
 	.string "forktest"
 	.string "argtest"
+	.string "runtest"
 	.string "getpid"
 	.string "getppid"
 	.string "write"
@@ -38,15 +40,15 @@ _app_names:
 	.string "sleep"
 	.string "wait"
 	.string "waitpid"
+	.string "times"
 	.string "exit"
 	.string "brk"
 	.string "execve"
-	.string "test_echo"
 	.string "fork"
-	.string "times"
 	.string "yield"
 	.string "clone"
-	.string "busybox"
+	.string "mount"
+	.string "umount"
 
 	.section .data
 	.global init_start
@@ -80,60 +82,75 @@ argtest_start:
 	.incbin "../user_c/build/argtest"
 argtest_end:
 
+	.section .data
+	.global runtest_start
+	.global runtest_end
+	.align 3
+runtest_start:
+	.incbin "../user_c/build/runtest"
+runtest_end:
+
 	.global getpid_start
 	.global getpid_end
 	.align 3
 getpid_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getpid"
+	.incbin "../testbin/getpid"
 getpid_end:
 
 	.global getppid_start
 	.global getppid_end
 	.align 3
 getppid_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getppid"
+	.incbin "../testbin/getppid"
 getppid_end:
 
 	.global write_start
 	.global write_end
 	.align 3
 write_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/write"
+	.incbin "../testbin/write"
 write_end:
 
 	.global gettimeofday_start
 	.global gettimeofday_end
 	.align 3
 gettimeofday_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/gettimeofday"
+	.incbin "../testbin/gettimeofday"
 gettimeofday_end:
 
 	.global sleep_start
 	.global sleep_end
 	.align 3
 sleep_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/sleep"
+	.incbin "../testbin/sleep"
 sleep_end:
 
 	.global wait_start
 	.global wait_end
 	.align 3
 wait_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/wait"
+	.incbin "../testbin/wait"
 wait_end:
 
 	.global waitpid_start
 	.global waitpid_end
 	.align 3
 waitpid_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/waitpid"
+	.incbin "../testbin/waitpid"
 waitpid_end:
+
+	.global times_start
+	.global times_end
+	.align 3
+times_start:
+	.incbin "../testbin/times"
+times_end:
 
 	.global exit_start
 	.global exit_end
 	.align 3
 exit_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/exit"
+	.incbin "../testbin/exit"
 exit_end:
 
 	.global brk_start
@@ -147,48 +164,41 @@ brk_end:
 	.global execve_end
 	.align 3
 execve_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/execve"
+	.incbin "../testbin/execve"
 execve_end:
-
-	.global test_echo_start
-	.global test_echo_end
-	.align 3
-test_echo_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/test_echo"
-test_echo_end:
 
 	.global fork_start
 	.global fork_end
 	.align 3
 fork_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/fork"
+	.incbin "../testbin/fork"
 fork_end:
-
-	.global times_start
-	.global times_end
-	.align 3
-times_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/times"
-times_end:
 
 	.global yield_start
 	.global yield_end
 	.align 3
 yield_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/yield"
+	.incbin "../testbin/yield"
 yield_end:
 
 	.global clone_start
 	.global clone_end
 	.align 3
 clone_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/clone"
+	.incbin "../testbin/clone"
 clone_end:
 
-	.global busybox_start
-	.global busybox_end
+	.global mount_start
+	.global mount_end
 	.align 3
-busybox_start:
-	.incbin "../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/busybox"
-busybox_end:
+mount_start:
+	.incbin "../testbin/mount"
+mount_end:
+
+	.global umount_start
+	.global umount_end
+	.align 3
+umount_start:
+	.incbin "../testbin/umount"
+umount_end:
 

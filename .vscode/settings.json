@@ -22,6 +22,8 @@
 		"./os/kernel/Cargo.toml",
 		"./os/kernel/Cargo.toml",
 		"./os/kernel/Cargo.toml",
+		"./os/kernel/Cargo.toml",
+		"./os/kernel/Cargo.toml",
 		"./os/kernel/Cargo.toml"
 	],
 	"rust-analyzer.check.allTargets": false,

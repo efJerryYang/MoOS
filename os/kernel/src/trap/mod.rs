@@ -14,7 +14,7 @@
 
 mod context;
 
-use crate::{syscall::{syscall, process::sys_yield}, config::TRAPFRAME, task::{task_list, cpu::mycpu, proc::*}, timer::set_next_trigger};
+use crate::{syscall::{syscall, process::sys_yield}, config::TRAPFRAME, task::{task_list, cpu::mycpu, proc::*}, timer::{set_next_trigger, get_time_ms}};
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
@@ -47,6 +47,9 @@ pub unsafe fn trap_handler() -> ! {
 	let scause = scause::read(); // get trap cause
     let stval = stval::read(); // get extra value
 	// println!("USER TRAP: stval={:#x},pc={:#x}",stval,cx.sepc);
+	task_list.exclusive_access()[mycpu().proc_idx].utime+=get_time_ms()-task_list.exclusive_access()[mycpu().proc_idx].otime;
+	task_list.exclusive_access()[mycpu().proc_idx].otime=get_time_ms();
+
     match scause.cause() {
 		Trap::Exception(Exception::UserEnvCall) => {
 			let mut cx:&mut TrapFrame=task_list.exclusive_access()[mycpu().proc_idx].trapframe_ppn.get_mut();
@@ -85,6 +88,9 @@ pub unsafe fn trap_handler() -> ! {
 #[no_mangle]
 pub unsafe fn trap_return() -> ! {
 	stvec::write(TRAMPOLINE as usize, TrapMode::Direct);
+	task_list.exclusive_access()[mycpu().proc_idx].ktime+=get_time_ms()-task_list.exclusive_access()[mycpu().proc_idx].otime;
+	task_list.exclusive_access()[mycpu().proc_idx].otime=get_time_ms();
+	
     let trapframe_ptr = TRAPFRAME;
     let user_satp = task_list.exclusive_access_const()[mycpu().proc_idx].memory_set.token();
     extern "C" {

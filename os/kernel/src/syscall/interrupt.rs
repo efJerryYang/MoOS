@@ -7,7 +7,6 @@ pub unsafe fn sys_gettimeofday(ptr: *mut usize)->isize{
 	let ts=get_time_us();
 	*t=ts/1000000;
 	*(t.add(1))=ts%1000000;
-	set_next_trigger();
 	return 0;
 }
 pub unsafe fn sys_nanosleep(req: *mut timespec,rem: *mut timespec)->isize{
@@ -17,4 +16,13 @@ pub unsafe fn sys_nanosleep(req: *mut timespec,rem: *mut timespec)->isize{
 		sys_yield();
 	}
 	return 0;
+}
+
+pub unsafe fn sys_times(tms_addr:usize)->isize{
+	let mut tms= tms_addr as *mut usize;
+	*tms.add(0)=task_list.exclusive_access()[mycpu().proc_idx].utime;
+	*tms.add(1)=task_list.exclusive_access()[mycpu().proc_idx].ktime;
+	*tms.add(2)=0;
+	*tms.add(3)=0;
+	0
 }

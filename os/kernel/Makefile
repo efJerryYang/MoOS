@@ -12,9 +12,11 @@ BINS := $(patsubst $(APP_DIR)/%.rs, $(TARGET_DIR)/%.bin, $(APPS))
 OBJDUMP := rust-objdump --arch-name=riscv64
 OBJCOPY := rust-objcopy --binary-architecture=riscv64
 
-build: 
+userbin:
 	g++ -w ../tools/userbin_gen.cc -o ../tools/userbin_gen
 	../tools/userbin_gen > src/user_bin.S
+
+build: 
 	cargo build --release 
 
 binary:build 
@@ -22,7 +24,7 @@ binary:build
 asm:build
 	$(OBJDUMP) -D $(ELF) > debug/os.asm
 
-run: build binary
+run: userbin binary
 	qemu-system-riscv64 \
     -machine virt \
     -nographic \
