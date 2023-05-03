@@ -118,6 +118,12 @@ pub trait INode: Any + Sync + Send {
     /// This is used to implement dynamics cast.
     /// Simply return self in the implement of the function.
     fn as_any_ref(&self) -> &dyn Any;
+    
+    /// Get the file size of the inode.
+    fn file_size(&self) -> usize;
+
+    /// Get the file data of the inode.
+    fn file_data(&mut self) -> &mut Vec<u8>;
 }
 
 impl dyn INode {

@@ -156,4 +156,10 @@ impl INode for RegFileINode {
     fn as_any_ref(&self) -> &dyn _core::any::Any {
         return &1;
     }
+    fn file_size(&self) -> usize {
+        return self.file.len();
+    }
+    fn file_data(&mut self) -> &mut Vec<u8> {
+        return &mut self.file;
+    }
 }

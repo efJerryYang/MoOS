@@ -63,6 +63,7 @@ int nanosleep(const *timespec req,*timespec rem);//rem not implemented
 ```c
 #define SYS_openat 56
 #define SYS_close 57
+#define SYS_getcwd 17
 #define SYS_getdents64 61 ?
 #define SYS_read 63
 #define SYS_write 64

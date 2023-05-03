@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 26
+	.quad 27
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -29,7 +29,8 @@ _app_num:
 	.quad clone_start
 	.quad mount_start
 	.quad umount_start
-	.quad umount_end
+	.quad getcwd_start
+	.quad getcwd_end
 
 	.globl _app_names
 _app_names:
@@ -59,6 +60,7 @@ _app_names:
 	.string "clone"
 	.string "mount"
 	.string "umount"
+	.string "getcwd"
 
 	.section .data
 	.global init_start
@@ -246,4 +248,11 @@ mount_end:
 umount_start:
 	.incbin "../testbin/umount"
 umount_end:
+
+	.global getcwd_start
+	.global getcwd_end
+	.align 3
+getcwd_start:
+	.incbin "../testbin/getcwd"
+getcwd_end:
 

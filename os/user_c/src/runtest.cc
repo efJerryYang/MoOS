@@ -23,6 +23,7 @@ char testsuits_name[][49]={
 	"openat",
 	"open",
 	"close",
+	"getcwd",
 };
 signed main(){
 	int test_cc=sizeof(testsuits_name)/49;

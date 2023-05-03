@@ -17,6 +17,28 @@ use crate::{
 const FD_STDOUT: usize = 1;
 const FD_STDIN: usize = 0;
 
+// int getcwd(char *buf, size_t size);
+pub fn sys_getcwd(buf: *mut u8, size: usize) -> isize {
+    let task = myproc();
+    let cwd = task.cwd.clone();
+    let cwd_str = cwd.as_str();
+
+    // 确保缓冲区足够大
+    if size < cwd_str.len() + 1 {
+        return -1;
+    }
+
+    // 将当前工作目录字符串复制到用户提供的缓冲区
+    let mut buffers = translated_byte_buffer(task.memory_set.token(), buf, cwd_str.len() + 1);
+    for (i, byte) in cwd_str.as_bytes().iter().enumerate() {
+        buffers[0][i] = *byte;
+    }
+    // 添加空终止符
+    buffers[0][cwd_str.len()] = 0;
+
+    // 返回字符串长度（包括空终止符）
+    (cwd_str.len() + 1) as isize
+}
 // int openat(int dirfd,const char *path, int flags)
 pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     let task = myproc();
@@ -166,7 +188,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 
             for buffer in buffers {
                 for byte in buffer {
-                    // inode.data.push(*byte);
+                    // TODO: inode.file.push(*byte);
                     buf_iter += 1;
                 }
             }
@@ -206,22 +228,21 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
             let mut read_bytes = 0;
             let mut buf_iter = 0;
 
-            if open_file.offset >= 1e4 as usize {
-                // TODO: fix this
+            if open_file.offset >= inode.file_size() as usize {
                 return 0;
             }
 
             let mut buffers = translated_byte_buffer(task.memory_set.token(), buf, len);
-            for buffer in &mut buffers {
-                // for byte in Iterator::new(buffer) {
-                //     if open_file.offset + buf_iter < 1e4 as usize {
-                //         // *byte = inode.file[open_file.offset + buf_iter];
-                //         buf_iter += 1;
-                //         read_bytes += 1;
-                //     } else {
-                //         break;
-                //     }
-                // }
+            for buffer in buffers {
+                for byte in buffer {
+                    if open_file.offset + buf_iter < inode.file_size() as usize {
+                        *byte = 111; // TODO: inode.file_data().clone()[open_file.offset + buf_iter];
+                        buf_iter += 1;
+                        read_bytes += 1;
+                    } else {
+                        break;
+                    }
+                }
             }
             read_bytes as isize
         }

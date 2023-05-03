@@ -30,7 +30,8 @@ char* testsuits_name[]={
 	"yield",
 	"clone",
 	"mount",
-	"umount"
+	"umount",
+	"getcwd",
 };
 
 signed main(){
