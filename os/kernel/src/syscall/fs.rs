@@ -42,10 +42,10 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     );
 
     let abs_path = format!("{}{}", start_dir_path, rel_path);
-    let fd ;
+    let fd;
     let inode = match global_dentry_cache.get(&abs_path) {
         Some(inode) => {
-            // 先检查是不是已经打开了这个文件
+            
             let open_file = Arc::new(OpenFile {
                 offset: 0,
                 status_flags: flags as u32,
@@ -58,16 +58,15 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
                 writable: flags as u32 & OpenFlags::WRONLY.bits() != 0,
             };
 
-            // let mut fd = fd_manager.len();
-            // for (i, fd) in fd_manager.fd_array.iter().enumerate() {
-            //     if fd.open_file.inode == inode  {
-            //         fd_manager.fd_array[i] = file_descriptor;
-            //         return i as isize;
-            //     }
-            // }
+            for (i, fd_ref) in fd_manager.fd_array.iter().enumerate() {
+                if Arc::ptr_eq(&fd_ref.open_file.inode, &inode) {
+                    fd_manager.fd_array[i] = file_descriptor;
+                    return i as isize;
+                }
+            }
             fd = fd_manager.insert(file_descriptor);
             inode.clone()
-        },
+        }
         None => {
             // create a new file in fs
             let new_inode = Arc::new(RegFileINode {
@@ -103,7 +102,6 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
             new_inode
         }
     };
-
 
     // let open_file = Arc::new(OpenFile {
     //     offset: 0,

@@ -91,13 +91,28 @@ pub struct FdManager {
 
 impl FdManager {
     pub fn new() -> Self {
-        Self {
-            fd_array: Vec::new(),
-        }
+        let mut v = Vec::new();
+        // 0, 1, 2 are reserved for stdin, stdout, stderr
+        v.push(FileDescriptor {
+            open_file: Arc::new(OpenFile::new()),
+            readable: true,
+            writable: true,
+        });
+        v.push(FileDescriptor {
+            open_file: Arc::new(OpenFile::new()),
+            readable: true,
+            writable: true,
+        });
+        v.push(FileDescriptor {
+            open_file: Arc::new(OpenFile::new()),
+            readable: true,
+            writable: true,
+        });
+        Self { fd_array: v }
     }
-	pub fn len(&self) -> usize {
-		self.fd_array.len()
-	}
+    pub fn len(&self) -> usize {
+        self.fd_array.len()
+    }
     // pub fn close(&mut self, fd: usize) {
     //     let mut fd = self.fd_array.get(fd);
     //     if let Some(fd) = fd {
@@ -176,9 +191,7 @@ impl PCB {
             otime: 0,
             ktime: 0,
             cwd: "/".to_string(),
-            fd_manager: Arc::new(Mutex::new(
-				FdManager::new(),
-			)),
+            fd_manager: Arc::new(Mutex::new(FdManager::new())),
         }
     }
 }
