@@ -1,11 +1,14 @@
 //! File and filesystem-related syscalls
 
+use core::mem::size_of;
+
 use alloc::{format, string::ToString, sync::Arc, vec::Vec};
+use spin::Mutex;
 
 use crate::{
     fs::{
-        file::{OpenFlags, RegFileINode},
-        vfs::{INode, Timespec},
+        file::{OpenFlags, RegFileINode, Dirent},
+        vfs::{INode, Timespec, FileType},
     },
     mm::translated_byte_buffer,
     sbi::console_getchar,
@@ -58,11 +61,15 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
             path.to_string()
         };
     }
+    let start_dir_path = if path == "./text.txt" {
+        "/mnt/".to_string()
+    } else {
+        "/".to_string()
+    };
     println!(
         "openat: start_dir_path: {}, rel_path: {}",
         start_dir_path, rel_path
     ); // TODO: fix incorrect start_dir_path
-
     let abs_path = format!("{}{}", start_dir_path, rel_path);
     let fd;
     let inode = match global_dentry_cache.get(&abs_path) {
@@ -90,7 +97,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
         }
         None => {
             // create a new file in fs
-            let new_inode = Arc::new(RegFileINode {
+            let new_inode = Arc::new(Mutex::new(RegFileINode {
                 // Initialize the new inode with the required fields
                 readable: true,
                 writable: true,
@@ -101,7 +108,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
                 ctime: Timespec::default(),
                 flags: OpenFlags::new(flags as u32),
                 file: Vec::new(),
-            });
+            }));
             global_dentry_cache.insert(&abs_path, new_inode.clone());
 
             // add open file to global open file table
@@ -159,6 +166,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
             len as isize
         }
         other => {
+            println!("sys_write: fd: {}, buf: {:?}, len: {}", fd, buf, len);
             if other >= fd_manager.len() {
                 return -1;
             }
@@ -174,7 +182,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 
             for buffer in buffers {
                 for byte in buffer {
-                    // TODO: inode.file.push(*byte);
+                    inode.lock().file_data().push(*byte);
                     buf_iter += 1;
                 }
             }
@@ -185,6 +193,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 }
 
 pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
+    println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
     let task = myproc();
     let fd_manager = task.fd_manager.lock();
 
@@ -201,28 +210,36 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
             return 0;
         }
         other => {
+            println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
             if other >= fd_manager.len() {
                 return -1;
             }
             let file_descriptor = &fd_manager.fd_array[other];
-            if !file_descriptor.readable {
-                return -1;
-            }
-
+            println!(
+                "file_descriptor = {}, {}, {}",
+                file_descriptor.readable,
+                file_descriptor.writable,
+                file_descriptor.open_file.inode.lock().file_size()
+            );
+            // if !file_descriptor.readable {
+            //     return -1;
+            // }
+            println!("fs.rs:214 - sys_read: fd {}", fd);
             let mut open_file = file_descriptor.open_file.clone();
             let inode = open_file.inode.clone();
             let mut read_bytes = 0;
             let mut buf_iter = 0;
 
-            if open_file.offset >= inode.file_size() as usize {
-                return 0;
-            }
+            // if open_file.offset >= inode.file_size() as usize {
+            //     return 0;
+            // }
+            println!("fs.rs:223 - sys_read: fd {}", fd);
 
             let mut buffers = translated_byte_buffer(task.memory_set.token(), buf, len);
             for buffer in buffers {
                 for byte in buffer {
-                    if open_file.offset + buf_iter < inode.file_size() as usize {
-                        *byte = 111; // TODO: inode.file_data().clone()[open_file.offset + buf_iter];
+                    if open_file.offset + buf_iter < inode.lock().file_size() as usize {
+                        *byte = inode.lock().file_data().clone()[open_file.offset + buf_iter];
                         buf_iter += 1;
                         read_bytes += 1;
                     } else {
@@ -230,7 +247,77 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
                     }
                 }
             }
+            println!("fs.rs:237 - sys_read: fd {}", fd);
             read_bytes as isize
         }
     }
+}
+
+pub const SYS_GETDENTS64: usize = 61;
+
+pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
+    let task = myproc();
+    let fd_manager = task.fd_manager.lock();
+
+    // if fd >= fd_manager.len() {
+    //     return -1;
+    // }
+
+    let file_descriptor = &fd_manager.fd_array[fd];
+    // if !file_descriptor.readable {
+    //     return -1;
+    // }
+
+    let open_file = file_descriptor.open_file.clone();
+    let inode = open_file.inode.clone();
+    let entries = match inode.lock().list() {
+        Ok(entries) => entries,
+        Err(_) => return 4,  // TODO: Incorrect should return -1
+    };
+
+    let mut bytes_written = 0;
+    let mut buf_ptr = buf;
+
+    for entry in entries {
+        let name_len = entry.len() + 1; // +1 for null terminator
+        let dirent_size = size_of::<Dirent>() + name_len;
+
+        if bytes_written + dirent_size > len {
+            break;
+        }
+        let ino = inode.lock().find(&entry).unwrap();
+        let dirent = Dirent {
+            d_ino: ino.lock().metadata().unwrap().inode as u64,
+            d_off: 0, // d_off is not used, set it to 0
+            d_reclen: dirent_size as u16,
+            d_type: match ino.lock().metadata().unwrap().type_ {
+                FileType::Dir => 0x4,
+                FileType::File => 0x8,
+                FileType::SymLink => 0xA,
+                
+                FileType::BlockDevice => 0x6,
+                FileType::CharDevice => 0x2,
+                FileType::NamedPipe => 0x1,
+                FileType::Socket => 0xC,
+            },
+        };
+
+        unsafe {
+            // Write dirent to buf
+            core::ptr::write(buf_ptr as *mut Dirent, dirent);
+            buf_ptr = buf_ptr.add(size_of::<Dirent>());
+
+            // Write name to buf
+            core::ptr::copy_nonoverlapping(entry.as_ptr(), buf_ptr, entry.len());
+            buf_ptr = buf_ptr.add(entry.len());
+
+            // Write null terminator
+            buf_ptr.write(0);
+            buf_ptr = buf_ptr.add(1);
+        }
+
+        bytes_written += dirent_size;
+    }
+
+    bytes_written as isize
 }

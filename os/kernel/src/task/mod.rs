@@ -50,20 +50,20 @@ pub enum ProcessState {
 pub struct OpenFile {
     pub offset: usize,
     pub status_flags: u32,
-    pub inode: Arc<dyn INode>,
+    pub inode: Arc<Mutex<dyn INode>>,
 }
 impl OpenFile {
     pub fn new() -> Self {
         Self {
             offset: 0,
             status_flags: 0,
-            inode: Arc::new(RegFileINode::new(
+            inode: Arc::new(Mutex::new(RegFileINode::new(
                 "/".to_string(),
                 "null".to_string(),
                 OpenFlags::new(0),
-                false,
-                false,
-            )),
+                true,
+                true,
+            ))),
         }
     }
 }
@@ -139,22 +139,22 @@ impl FdManager {
     }
 }
 pub struct GlobalInodeTable {
-    pub table: Arc<Mutex<Vec<Arc<dyn INode>>>>,
+    pub table: Arc<Mutex<Vec<Arc<Mutex<dyn INode>>>>>,
 }
 
 pub struct GlobalDentryCache {
-    pub table: Arc<Mutex<HashMap<String, Arc<dyn INode>>>>,
+    pub table: Arc<Mutex<HashMap<String, Arc<Mutex<dyn INode>>>>>,
 }
 
 impl GlobalDentryCache {
-    pub fn get(&self, path: &str) -> Option<Arc<dyn INode>> {
+    pub fn get(&self, path: &str) -> Option<Arc<Mutex<dyn INode>>> {
         let mut table = self.table.lock();
         match table.get(path) {
             Some(inode) => Some(inode.clone()),
             None => None,
         }
     }
-    pub fn insert(&self, path: &str, inode: Arc<dyn INode>) -> Arc<dyn INode> {
+    pub fn insert(&self, path: &str, inode: Arc<Mutex<dyn INode>>) -> Arc<Mutex<dyn INode>> {
         let mut table = self.table.lock();
         let old_path = path.to_string().clone();
         table.insert(path.to_string(), inode);

@@ -32,6 +32,7 @@ char* testsuits_name[]={
 	"mount",
 	"umount",
 	"getcwd",
+	"getdents",
 };
 
 signed main(){

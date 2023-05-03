@@ -1,15 +1,16 @@
 use crate::fs::vfs::{INode, Metadata, Result, Timespec};
 use _core::any::Any;
 use alloc::{string::String, sync::Arc, vec::Vec};
+use spin::Mutex;
 pub struct File {
-    inode: Arc<dyn INode>,
+    inode: Arc<Mutex<dyn INode>>,
     offset: usize,
     readable: bool,
     writable: bool,
 }
 
 impl File {
-    pub fn new(inode: Arc<dyn INode>, readable: bool, writable: bool) -> Self {
+    pub fn new(inode: Arc<Mutex<dyn INode>>, readable: bool, writable: bool) -> Self {
         File {
             inode,
             offset: 0,
@@ -20,24 +21,24 @@ impl File {
 
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         assert!(self.readable);
-        let len = self.inode.read_at(self.offset, buf)?;
+        let len = self.inode.lock().read_at(self.offset, buf)?;
         self.offset += len;
         Ok(len)
     }
 
     pub fn write(&mut self, buf: &[u8]) -> Result<usize> {
         assert!(self.writable);
-        let len = self.inode.write_at(self.offset, buf)?;
+        let len = self.inode.lock().write_at(self.offset, buf)?;
         self.offset += len;
         Ok(len)
     }
 
     pub fn info(&self) -> Result<Metadata> {
-        self.inode.metadata()
+        self.inode.lock().metadata()
     }
 
     pub fn get_entry(&self, id: usize) -> Result<String> {
-        self.inode.get_entry(id)
+        self.inode.lock().get_entry(id)
     }
 }
 use super::vfs::{FsError, PollStatus};
@@ -162,4 +163,13 @@ impl INode for RegFileINode {
     fn file_data(&mut self) -> &mut Vec<u8> {
         return &mut self.file;
     }
+}
+
+#[repr(C)]
+pub struct Dirent {
+    pub d_ino: u64, // 索引结点号
+    pub d_off: i64, // 到下一个dirent的偏移
+    pub d_reclen: u16, // 当前dirent的长度
+    pub d_type: u8, // 文件类型
+    // d_name: char[]; // 文件名, 该字段不包含在结构体中，因为它是一个不定长数组
 }
