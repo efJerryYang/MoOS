@@ -1,6 +1,6 @@
 //! File and filesystem-related syscalls
 
-use alloc::{string::ToString, sync::Arc, vec::Vec};
+use alloc::{string::ToString, sync::Arc, vec::Vec, format};
 
 use crate::{
     fs::{
@@ -18,11 +18,23 @@ const FD_STDIN: usize = 0;
 pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     let task = myproc();
     let mut fd_manager = &mut task.fd_manager.lock();
+    let file_path;
 
+    println!("openat: dirfd: {}, path: {}, flags: {}", dirfd, path, flags);
+    if path == "." {
+        file_path = task.cwd.clone();
+    } else if path.starts_with("./") {
+        file_path = format!("{}{}", task.cwd.clone(), path.strip_prefix("./").unwrap());
+    } else if path.starts_with("/") {
+        file_path = path.to_string();
+    } else {
+        file_path = task.cwd.clone() + path;
+    }
+    println!("openat: file_path: {}", file_path);
     let inode = match global_dentry_cache.get(path) {
         Some(inode) => inode.clone(),
         None => {
-            if flags as u32 & OpenFlags::CREATE.bits() != 0 {
+            if flags as u32 & OpenFlags::RDWR.bits() != 0 {
                 let new_inode = Arc::new(RegFileINode {
                     // Initialize the new inode with the required fields
                     readable: true,
@@ -35,6 +47,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
                     flags: OpenFlags::new(flags as u32),
                     file: Vec::new(),
                 });
+                // global_inode_table.insert(new_inode.clone());
                 global_dentry_cache.insert(path.to_string(), new_inode.clone())
             } else {
                 return 1;

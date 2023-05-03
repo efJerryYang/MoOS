@@ -79,7 +79,7 @@ impl OpenFlags {
     }
 
 }
-
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RegFileINode {
     pub readable: bool,
     pub writable: bool,
@@ -93,6 +93,27 @@ pub struct RegFileINode {
     pub flags: OpenFlags,
     // File data
     pub file: Vec<u8>,
+}
+impl RegFileINode {
+    pub fn new(
+        dir: String,
+        name: String,
+        flags: OpenFlags,
+        readable: bool,
+        writable: bool,
+    ) -> Self {
+        RegFileINode {
+            readable,
+            writable,
+            dir,
+            name,
+            atime: Timespec::default(),
+            mtime: Timespec::default(),
+            ctime: Timespec::default(),
+            flags,
+            file: Vec::new(),
+        }
+    }
 }
 
 impl INode for RegFileINode {
