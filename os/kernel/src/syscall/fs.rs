@@ -51,7 +51,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
         start_dir_path = "/".to_string();
         rel_path = path.strip_prefix("/").unwrap_or(path).to_string();
     } else {
-        start_dir_path = task.cwd.clone();
+        start_dir_path = task.cwd.clone(); // TODO: consider dirfd
         rel_path = if path.starts_with("./") {
             path.strip_prefix("./").unwrap().to_string()
         } else {
@@ -61,7 +61,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     println!(
         "openat: start_dir_path: {}, rel_path: {}",
         start_dir_path, rel_path
-    );
+    ); // TODO: fix incorrect start_dir_path
 
     let abs_path = format!("{}{}", start_dir_path, rel_path);
     let fd;
@@ -124,20 +124,6 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
         }
     };
 
-    // let open_file = Arc::new(OpenFile {
-    //     offset: 0,
-    //     status_flags: flags as u32,
-    //     inode,
-    // });
-
-    // let file_descriptor = FileDescriptor {
-    //     open_file,
-    //     readable: flags as u32 & OpenFlags::RDONLY.bits() != 0,
-    //     writable: flags as u32 & OpenFlags::WRONLY.bits() != 0,
-    // };
-
-    // let fd = fd_manager.len();
-    // fd_manager.insert(file_descriptor);
     fd as isize
 }
 
@@ -148,7 +134,7 @@ pub fn sys_close(fd: isize) -> isize {
     if fd as usize >= fd_manager.len() {
         return -1;
     }
-    fd_manager.remove(fd as usize);
+    fd_manager.close(fd as usize);
     0
 }
 

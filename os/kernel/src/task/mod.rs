@@ -113,17 +113,17 @@ impl FdManager {
     pub fn len(&self) -> usize {
         self.fd_array.len()
     }
-    // pub fn close(&mut self, fd: usize) {
-    //     let mut fd = self.fd_array.get(fd);
-    //     if let Some(fd) = fd {
-    // 		if fd.readable || fd.writable {
-    // 			// Do nothing
-    // 			return ;
-    // 		}
-    //         let open_file = fd.open_file.clone();
-    //         fd.open_file = Arc::new(OpenFile::new());
-    //     }
-    // }
+    pub fn close(&mut self, fd: usize) {
+        let mut fd: Option<&mut FileDescriptor> = self.fd_array.get_mut(fd);
+        if let Some(fd) = fd {
+            if fd.readable || fd.writable {
+                // Do nothing
+                return;
+            }
+            let open_file = fd.open_file.clone();
+            fd.open_file = Arc::new(OpenFile::new());
+        }
+    }
     pub fn insert(&mut self, file_descriptor: FileDescriptor) -> usize {
         self.fd_array.push(file_descriptor);
         self.fd_array.len() - 1
