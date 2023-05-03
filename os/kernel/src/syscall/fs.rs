@@ -45,7 +45,6 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     let fd;
     let inode = match global_dentry_cache.get(&abs_path) {
         Some(inode) => {
-            
             let open_file = Arc::new(OpenFile {
                 offset: 0,
                 status_flags: flags as u32,
@@ -134,7 +133,7 @@ pub fn sys_close(fd: isize) -> isize {
 /// write buf of length `len`  to a file with `fd`
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let task = myproc();
-    let mut fd_manager = &mut task.fd_manager.lock();
+    let fd_manager = task.fd_manager.lock();
 
     match fd {
         FD_STDOUT => {
@@ -151,14 +150,36 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
             }
             len as isize
         }
-        _ => {
-            panic!("Unsupported fd in sys_write!");
+        other => {
+            if other >= fd_manager.len() {
+                return -1;
+            }
+            let file_descriptor = &fd_manager.fd_array[other];
+            if !file_descriptor.writable {
+                return -1;
+            }
+
+            let mut open_file = file_descriptor.open_file.clone();
+            let inode = open_file.inode.clone();
+            let mut buf_iter = 0;
+            let buffers = translated_byte_buffer(task.memory_set.token(), buf, len);
+
+            for buffer in buffers {
+                for byte in buffer {
+                    // inode.data.push(*byte);
+                    buf_iter += 1;
+                }
+            }
+            // open_file.offset += buf_iter;
+            buf_iter as isize
         }
     }
 }
+
 pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
     let task = myproc();
-    let mut fd_manager = &mut task.fd_manager.lock();
+    let fd_manager = task.fd_manager.lock();
+
     match fd {
         FD_STDIN => {
             let mut buffers = translated_byte_buffer(
@@ -171,8 +192,38 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
             buffers[0][0] = console_getchar() as u8;
             return 0;
         }
-        _ => {
-            panic!("Unsupported fd in sys_read!");
+        other => {
+            if other >= fd_manager.len() {
+                return -1;
+            }
+            let file_descriptor = &fd_manager.fd_array[other];
+            if !file_descriptor.readable {
+                return -1;
+            }
+
+            let mut open_file = file_descriptor.open_file.clone();
+            let inode = open_file.inode.clone();
+            let mut read_bytes = 0;
+            let mut buf_iter = 0;
+
+            if open_file.offset >= 1e4 as usize {
+                // TODO: fix this
+                return 0;
+            }
+
+            let mut buffers = translated_byte_buffer(task.memory_set.token(), buf, len);
+            for buffer in &mut buffers {
+                // for byte in Iterator::new(buffer) {
+                //     if open_file.offset + buf_iter < 1e4 as usize {
+                //         // *byte = inode.file[open_file.offset + buf_iter];
+                //         buf_iter += 1;
+                //         read_bytes += 1;
+                //     } else {
+                //         break;
+                //     }
+                // }
+            }
+            read_bytes as isize
         }
     }
 }
