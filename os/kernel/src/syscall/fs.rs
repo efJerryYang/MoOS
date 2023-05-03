@@ -1,15 +1,18 @@
 //! File and filesystem-related syscalls
 
-use alloc::{string::ToString, sync::Arc, vec::Vec, format};
+use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 
 use crate::{
     fs::{
         file::{OpenFlags, RegFileINode},
-        vfs::Timespec,
+        vfs::{INode, Timespec},
     },
     mm::translated_byte_buffer,
     sbi::console_getchar,
-    task::{cpu::mycpu, global_dentry_cache, myproc, task_list, FileDescriptor, OpenFile},
+    task::{
+        cpu::mycpu, global_dentry_cache, global_open_file_table, myproc, task_list, FdManager,
+        FileDescriptor, OpenFile,
+    },
 };
 const FD_STDOUT: usize = 1;
 const FD_STDIN: usize = 0;
@@ -18,57 +21,104 @@ const FD_STDIN: usize = 0;
 pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     let task = myproc();
     let mut fd_manager = &mut task.fd_manager.lock();
-    let file_path;
 
     println!("openat: dirfd: {}, path: {}, flags: {}", dirfd, path, flags);
-    if path == "." {
-        file_path = task.cwd.clone();
-    } else if path.starts_with("./") {
-        file_path = format!("{}{}", task.cwd.clone(), path.strip_prefix("./").unwrap());
-    } else if path.starts_with("/") {
-        file_path = path.to_string();
+    let start_dir_path;
+    let rel_path;
+    if path.starts_with("/") {
+        start_dir_path = "/".to_string();
+        rel_path = path.strip_prefix("/").unwrap_or(path).to_string();
     } else {
-        file_path = task.cwd.clone() + path;
+        start_dir_path = task.cwd.clone();
+        rel_path = if path.starts_with("./") {
+            path.strip_prefix("./").unwrap().to_string()
+        } else {
+            path.to_string()
+        };
     }
-    println!("openat: file_path: {}", file_path);
-    let inode = match global_dentry_cache.get(path) {
-        Some(inode) => inode.clone(),
+    println!(
+        "openat: start_dir_path: {}, rel_path: {}",
+        start_dir_path, rel_path
+    );
+
+    let abs_path = format!("{}{}", start_dir_path, rel_path);
+    let fd ;
+    let inode = match global_dentry_cache.get(&abs_path) {
+        Some(inode) => {
+            // 先检查是不是已经打开了这个文件
+            let open_file = Arc::new(OpenFile {
+                offset: 0,
+                status_flags: flags as u32,
+                inode: inode.clone(),
+            });
+
+            let file_descriptor = FileDescriptor {
+                open_file: open_file.clone(),
+                readable: flags as u32 & OpenFlags::RDONLY.bits() != 0,
+                writable: flags as u32 & OpenFlags::WRONLY.bits() != 0,
+            };
+
+            // let mut fd = fd_manager.len();
+            // for (i, fd) in fd_manager.fd_array.iter().enumerate() {
+            //     if fd.open_file.inode == inode  {
+            //         fd_manager.fd_array[i] = file_descriptor;
+            //         return i as isize;
+            //     }
+            // }
+            fd = fd_manager.insert(file_descriptor);
+            inode.clone()
+        },
         None => {
-            if flags as u32 & OpenFlags::RDWR.bits() != 0 {
-                let new_inode = Arc::new(RegFileINode {
-                    // Initialize the new inode with the required fields
-                    readable: true,
-                    writable: true,
-                    dir: "/".to_string(),
-                    name: path.to_string(),
-                    atime: Timespec::default(),
-                    mtime: Timespec::default(),
-                    ctime: Timespec::default(),
-                    flags: OpenFlags::new(flags as u32),
-                    file: Vec::new(),
-                });
-                // global_inode_table.insert(new_inode.clone());
-                global_dentry_cache.insert(path.to_string(), new_inode.clone())
-            } else {
-                return 1;
-            }
+            // create a new file in fs
+            let new_inode = Arc::new(RegFileINode {
+                // Initialize the new inode with the required fields
+                readable: true,
+                writable: true,
+                dir: start_dir_path.clone(),
+                name: rel_path.clone(),
+                atime: Timespec::default(),
+                mtime: Timespec::default(),
+                ctime: Timespec::default(),
+                flags: OpenFlags::new(flags as u32),
+                file: Vec::new(),
+            });
+            global_dentry_cache.insert(&abs_path, new_inode.clone());
+
+            // add open file to global open file table
+            let open_file = Arc::new(OpenFile {
+                offset: 0,
+                status_flags: flags as u32,
+                inode: new_inode.clone(),
+            });
+            global_open_file_table.insert(open_file.clone());
+
+            // update fd manager
+            let file_descriptor = FileDescriptor {
+                open_file: open_file.clone(),
+                readable: flags as u32 & OpenFlags::RDONLY.bits() != 0,
+                writable: flags as u32 & OpenFlags::WRONLY.bits() != 0,
+            };
+            fd = fd_manager.len();
+            fd_manager.insert(file_descriptor);
+            new_inode
         }
     };
 
-    let open_file = Arc::new(OpenFile {
-        offset: 0,
-        status_flags: flags as u32,
-        inode,
-    });
 
-    let file_descriptor = FileDescriptor {
-        open_file,
-        readable: flags as u32 & OpenFlags::RDONLY.bits() != 0,
-        writable: flags as u32 & OpenFlags::WRONLY.bits() != 0,
-    };
+    // let open_file = Arc::new(OpenFile {
+    //     offset: 0,
+    //     status_flags: flags as u32,
+    //     inode,
+    // });
 
-    let fd = fd_manager.len();
-    fd_manager.push(file_descriptor);
+    // let file_descriptor = FileDescriptor {
+    //     open_file,
+    //     readable: flags as u32 & OpenFlags::RDONLY.bits() != 0,
+    //     writable: flags as u32 & OpenFlags::WRONLY.bits() != 0,
+    // };
+
+    // let fd = fd_manager.len();
+    // fd_manager.insert(file_descriptor);
     fd as isize
 }
 

@@ -95,6 +95,9 @@ impl FdManager {
             fd_array: Vec::new(),
         }
     }
+	pub fn len(&self) -> usize {
+		self.fd_array.len()
+	}
     // pub fn close(&mut self, fd: usize) {
     //     let mut fd = self.fd_array.get(fd);
     //     if let Some(fd) = fd {
@@ -121,7 +124,7 @@ impl FdManager {
     }
 }
 pub struct GlobalInodeTable {
-    table: Arc<Mutex<Vec<Arc<dyn INode>>>>,
+    pub table: Arc<Mutex<Vec<Arc<dyn INode>>>>,
 }
 
 pub struct GlobalDentryCache {
@@ -136,10 +139,10 @@ impl GlobalDentryCache {
             None => None,
         }
     }
-    pub fn insert(&self, path: String, inode: Arc<dyn INode>) -> Arc<dyn INode> {
+    pub fn insert(&self, path: &str, inode: Arc<dyn INode>) -> Arc<dyn INode> {
         let mut table = self.table.lock();
-        let old_path = path.clone();
-        table.insert(path, inode);
+        let old_path = path.to_string().clone();
+        table.insert(path.to_string(), inode);
         table.get(&old_path).unwrap().clone()
     }
 }
@@ -156,7 +159,7 @@ pub struct PCB {
     pub utime: usize,
     pub ktime: usize,
     pub cwd: String,
-    pub fd_manager: Arc<Mutex<Vec<FileDescriptor>>>,
+    pub fd_manager: Arc<Mutex<FdManager>>,
 }
 
 impl PCB {
@@ -173,7 +176,9 @@ impl PCB {
             otime: 0,
             ktime: 0,
             cwd: "/".to_string(),
-            fd_manager: Arc::new(Mutex::new(Vec::new())),
+            fd_manager: Arc::new(Mutex::new(
+				FdManager::new(),
+			)),
         }
     }
 }
