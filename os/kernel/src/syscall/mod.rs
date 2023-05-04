@@ -41,7 +41,7 @@ use process::*;
 use interrupt::*;
 use mm::*;
 
-use crate::{task::{cpu::mycpu, task_list}, mm::{VirtAddr, page_table::{PageTable, translate_str}}};
+use crate::{task::{cpu::mycpu, task_list, myproc}, mm::{VirtAddr, page_table::{PageTable, translate_str}}};
 
 #[repr(C)]
 pub struct timespec{
@@ -50,7 +50,7 @@ pub struct timespec{
 }
 
 pub fn translate(ptr: usize)-> usize{
-	PageTable::from_token(task_list.exclusive_access()[mycpu().proc_idx].memory_set.token()).translate_va(VirtAddr::from(ptr as usize)).unwrap().get_mut() as *mut u8 as usize
+	PageTable::from_token(myproc().memory_set.token()).translate_va(VirtAddr::from(ptr as usize)).unwrap().get_mut() as *mut u8 as usize
 }
 
 /// handle syscall exception with `syscall_id` and other arguments

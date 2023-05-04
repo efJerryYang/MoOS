@@ -18,15 +18,16 @@ char testsuits_name[][49]={
 	"times",
 	"yield",
 	"clone",
-	"mount",
 	"openat",
 	"open",
 	"close",
 	"getcwd",
+	"mount",
 	"umount",
 	"getdents",
 };
 signed main(){
+	// execve("shell",0,0);
 	int test_cc=sizeof(testsuits_name)/49;
 	printf("test cases:%d\n",test_cc);
 	for(int i=0;i<test_cc;i++){
@@ -35,6 +36,5 @@ signed main(){
 		}else wait(0);
 	}
 	// execve("shell",0,0);
-	close(0);
 	return 0;
 }
