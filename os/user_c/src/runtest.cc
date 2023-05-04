@@ -7,6 +7,7 @@ char testsuits_name[][49]={
 	"getpid",
 	"getppid",
 	"write",
+	"read",
 	"gettimeofday",
 	"sleep",
 	"wait",
