@@ -34,6 +34,7 @@ char* testsuits_name[]={
 	"getcwd",
 	"getdents",
 	"dup",
+	"dup2",
 };
 
 signed main(){

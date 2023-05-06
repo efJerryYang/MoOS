@@ -27,6 +27,7 @@ char testsuits_name[][49]={
 	"umount",
 	"getdents",
 	"dup",
+	"dup2",
 };
 signed main(){
 	// execve("shell",0,0);

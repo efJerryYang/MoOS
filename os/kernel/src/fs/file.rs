@@ -1,4 +1,8 @@
-use crate::fs::vfs::{INode, Metadata, Result, Timespec};
+use crate::{
+    console::print,
+    fs::vfs::{INode, Metadata, Result, Timespec},
+    sbi::console_getchar,
+};
 use _core::any::Any;
 use alloc::{string::String, sync::Arc, vec::Vec};
 use spin::Mutex;
@@ -78,7 +82,6 @@ impl OpenFlags {
         let mut new_flags = OpenFlags::from_bits_truncate(flags);
         new_flags
     }
-
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RegFileINode {
@@ -165,11 +168,102 @@ impl INode for RegFileINode {
     }
 }
 
+pub struct TerminalINode {
+    pub readable: bool,
+    pub writable: bool,
+    pub file: Vec<u8>,
+}
+
+impl TerminalINode {
+    pub fn new_stdin() -> Self {
+        Self {
+            readable: true,
+            writable: false,
+            file: Vec::new(),
+        }
+    }
+
+    pub fn new_stdout() -> Self {
+        Self {
+            readable: false,
+            writable: true,
+            file: Vec::new(),
+        }
+    }
+
+    pub fn new_stderr() -> Self {
+        Self {
+            readable: false,
+            writable: true,
+            file: Vec::new(),
+        }
+    }
+}
+// terminal read
+pub fn terminal_read(buf: &mut [u8]) -> Result<usize> {
+    let mut len = 0;
+    for b in buf {
+        *b = console_getchar() as u8;
+        len += 1;
+    }
+    Ok(len)
+}
+
+// terminal write
+pub fn terminal_write(buf: &[u8]) -> Result<usize> {
+    let mut len = 0;
+    for b in buf {
+        print!("{}", core::str::from_utf8(&[*b]).unwrap());
+        len += 1;
+    }
+    Ok(len)
+}
+
+impl INode for TerminalINode {
+    fn read_at(&self, _offset: usize, buf: &mut [u8]) -> Result<usize> {
+        if !self.readable {
+            return Err(FsError::InvalidParam);
+        }
+
+        let len = terminal_read(buf)?;
+
+        Ok(len)
+    }
+
+    fn write_at(&self, _offset: usize, buf: &[u8]) -> Result<usize> {
+        if !self.writable {
+            return Err(FsError::InvalidParam);
+        }
+
+        let len = terminal_write(buf)?;
+
+        Ok(len)
+    }
+
+    // Implement other required INode methods as needed or with default behavior.
+
+    fn poll(&self) -> Result<PollStatus> {
+        Ok(PollStatus::default())
+    }
+
+    fn as_any_ref(&self) -> &dyn _core::any::Any {
+        return &1;
+    }
+
+    fn file_size(&self) -> usize {
+        return 0;
+    }
+
+    fn file_data(&mut self) -> &mut Vec<u8> {
+        return &mut self.file;
+    }
+}
+
 #[repr(C)]
 pub struct Dirent {
-    pub d_ino: u64, // 索引结点号
-    pub d_off: i64, // 到下一个dirent的偏移
+    pub d_ino: u64,    // 索引结点号
+    pub d_off: i64,    // 到下一个dirent的偏移
     pub d_reclen: u16, // 当前dirent的长度
-    pub d_type: u8, // 文件类型
-    // d_name: char[]; // 文件名, 该字段不包含在结构体中，因为它是一个不定长数组
+    pub d_type: u8,    // 文件类型
+                       // d_name: char[]; // 文件名, 该字段不包含在结构体中，因为它是一个不定长数组
 }

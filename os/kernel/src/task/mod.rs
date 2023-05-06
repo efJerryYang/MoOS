@@ -1,5 +1,5 @@
 use crate::fs::{
-    file::{OpenFlags, RegFileINode},
+    file::{OpenFlags, RegFileINode, TerminalINode},
     vfs::INode,
 };
 use alloc::string::{String, ToString};
@@ -52,6 +52,7 @@ pub struct OpenFile {
     pub status_flags: u32,
     pub inode: Arc<Mutex<dyn INode>>,
 }
+
 impl OpenFile {
     pub fn new() -> Self {
         Self {
@@ -64,6 +65,30 @@ impl OpenFile {
                 true,
                 true,
             ))),
+        }
+    }
+
+    pub fn new_stdin() -> Self {
+        Self {
+            offset: 0,
+            status_flags: 0,
+            inode: Arc::new(Mutex::new(TerminalINode::new_stdin())),
+        }
+    }
+
+    pub fn new_stdout() -> Self {
+        Self {
+            offset: 0,
+            status_flags: 0,
+            inode: Arc::new(Mutex::new(TerminalINode::new_stdout())),
+        }
+    }
+
+    pub fn new_stderr() -> Self {
+        Self {
+            offset: 0,
+            status_flags: 0,
+            inode: Arc::new(Mutex::new(TerminalINode::new_stderr())),
         }
     }
 }
@@ -94,18 +119,18 @@ impl FdManager {
         let mut v = Vec::new();
         // 0, 1, 2 are reserved for stdin, stdout, stderr
         v.push(FileDescriptor {
-            open_file: Arc::new(OpenFile::new()),
+            open_file: Arc::new(OpenFile::new_stdin()),
             readable: true,
+            writable: false,
+        });
+        v.push(FileDescriptor {
+            open_file: Arc::new(OpenFile::new_stdout()),
+            readable: false,
             writable: true,
         });
         v.push(FileDescriptor {
-            open_file: Arc::new(OpenFile::new()),
-            readable: true,
-            writable: true,
-        });
-        v.push(FileDescriptor {
-            open_file: Arc::new(OpenFile::new()),
-            readable: true,
+            open_file: Arc::new(OpenFile::new_stderr()),
+            readable: false,
             writable: true,
         });
         Self { fd_array: v }

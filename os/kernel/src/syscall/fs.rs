@@ -352,7 +352,7 @@ pub fn sys_dup(fd: isize) -> isize {
     if new_fd == -1 {
         new_fd = fd_manager.len() as isize;
     }
-    
+
     fd_manager.fd_array.push(FileDescriptor {
         readable: file_descriptor.readable,
         writable: file_descriptor.writable,
@@ -360,4 +360,42 @@ pub fn sys_dup(fd: isize) -> isize {
     });
 
     new_fd
+}
+
+// SYSCALL_DUP3 => sys_dup3(args[0] as isize, args[1] as isize, args[2] as isize),
+
+pub fn sys_dup3(fd: isize, new_fd: isize, flags: isize) -> isize {
+    let fd = fd as usize;
+    let new_fd = new_fd as usize;
+    let flags = flags as usize;
+    let task = myproc();
+    let mut fd_manager = task.fd_manager.lock();
+
+    if fd >= fd_manager.len() {
+        return -1;
+    }
+
+    let file_descriptor = &fd_manager.fd_array[fd].clone();
+    // if !file_descriptor.readable && !file_descriptor.writable {
+    //     return -1;
+    // }
+
+    let open_file = file_descriptor.open_file.clone();
+    let inode = open_file.inode.clone();
+
+    if new_fd >= fd_manager.len() {
+        fd_manager.fd_array.push(FileDescriptor {
+            readable: file_descriptor.readable,
+            writable: file_descriptor.writable,
+            open_file: open_file,
+        });
+    } else {
+        fd_manager.fd_array[new_fd] = FileDescriptor {
+            readable: file_descriptor.readable,
+            writable: file_descriptor.writable,
+            open_file: open_file,
+        };
+    }
+
+    new_fd as isize
 }

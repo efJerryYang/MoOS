@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 29
+	.quad 30
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -32,7 +32,8 @@ _app_num:
 	.quad getcwd_start
 	.quad getdents_start
 	.quad dup_start
-	.quad dup_end
+	.quad dup2_start
+	.quad dup2_end
 
 	.globl _app_names
 _app_names:
@@ -65,6 +66,7 @@ _app_names:
 	.string "getcwd"
 	.string "getdents"
 	.string "dup"
+	.string "dup2"
 
 	.section .data
 	.global init_start
@@ -273,4 +275,11 @@ getdents_end:
 dup_start:
 	.incbin "../testbin/dup"
 dup_end:
+
+	.global dup2_start
+	.global dup2_end
+	.align 3
+dup2_start:
+	.incbin "../testbin/dup2"
+dup2_end:
 
