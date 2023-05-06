@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 31
+	.quad 32
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -34,7 +34,8 @@ _app_num:
 	.quad dup_start
 	.quad dup2_start
 	.quad mkdir__start
-	.quad mkdir__end
+	.quad chdir_start
+	.quad chdir_end
 
 	.globl _app_names
 _app_names:
@@ -69,6 +70,7 @@ _app_names:
 	.string "dup"
 	.string "dup2"
 	.string "mkdir_"
+	.string "chdir"
 
 	.section .data
 	.global init_start
@@ -291,4 +293,11 @@ dup2_end:
 mkdir__start:
 	.incbin "../testbin/mkdir_"
 mkdir__end:
+
+	.global chdir_start
+	.global chdir_end
+	.align 3
+chdir_start:
+	.incbin "../testbin/chdir"
+chdir_end:
 

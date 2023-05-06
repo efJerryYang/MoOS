@@ -36,6 +36,7 @@ char* testsuits_name[]={
 	"dup",
 	"dup2",
 	"mkdir_",
+	"chdir",
 };
 
 signed main(){

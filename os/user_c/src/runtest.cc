@@ -29,6 +29,7 @@ char testsuits_name[][49]={
 	"dup",
 	"dup2",
 	"mkdir_",
+	"chdir",
 };
 signed main(){
 	// execve("shell",0,0);

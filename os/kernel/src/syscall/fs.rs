@@ -459,3 +459,16 @@ pub fn sys_mkdirat(fd: isize, path: &str, mode: usize) -> isize {
 
     0
 }
+
+// SYSCALL_CHDIR => sys_chdir(&translate_str(get_token(), args[0] as *mut u8)),
+
+pub fn sys_chdir(path: &str) -> isize {
+    let task = myproc();
+    let mut fd_manager = task.fd_manager.lock();
+
+    let mut path_iter = path.split('/');
+    let mut current_dir = task.cwd.clone();
+    let mut current_dir_name = String::from("/");
+    task.cwd = current_dir.clone() + path + "/";
+    0
+}
