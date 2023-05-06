@@ -35,6 +35,7 @@ char* testsuits_name[]={
 	"getdents",
 	"dup",
 	"dup2",
+	"mkdir_",
 };
 
 signed main(){

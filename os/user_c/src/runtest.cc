@@ -28,6 +28,7 @@ char testsuits_name[][49]={
 	"getdents",
 	"dup",
 	"dup2",
+	"mkdir_",
 };
 signed main(){
 	// execve("shell",0,0);

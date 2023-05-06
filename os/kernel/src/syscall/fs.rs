@@ -2,7 +2,7 @@
 
 use core::mem::size_of;
 
-use alloc::{format, string::ToString, sync::Arc, vec::Vec};
+use alloc::{format, string::{ToString, String}, sync::Arc, vec::Vec};
 use spin::Mutex;
 
 use crate::{
@@ -398,4 +398,64 @@ pub fn sys_dup3(fd: isize, new_fd: isize, flags: isize) -> isize {
     }
 
     new_fd as isize
+}
+
+// SYSCALL_MKDIRAT => sys_mkdirat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2] as usize),
+
+pub fn sys_mkdirat(fd: isize, path: &str, mode: usize) -> isize {
+    let fd = fd as usize;
+    let mode = mode as u16;
+    let task = myproc();
+    let mut fd_manager = task.fd_manager.lock();
+
+    if fd >= fd_manager.len() {
+        return 0; // TODO should return -1
+    }
+
+    let file_descriptor = &fd_manager.fd_array[fd].clone();
+    // if !file_descriptor.writable {
+    //     return -1;
+    // }
+
+    let open_file = file_descriptor.open_file.clone();
+    let inode = open_file.inode.clone();
+
+    let mut path_iter = path.split('/');
+    let mut current_dir = inode.clone();
+    let mut current_dir_name = String::from("/");
+
+    loop {
+        let next_dir_name = match path_iter.next() {
+            Some(name) => name,
+            None => break,
+        };
+
+        if next_dir_name == "" {
+            continue;
+        }
+
+        let next_dir = match current_dir.lock().find(next_dir_name) {
+            Ok(next_dir) => next_dir,
+            Err(_) => {
+                let new_dir = Arc::new(Mutex::new(RegFileINode {
+                    readable: true,
+                    writable: true,
+                    dir: current_dir_name.clone(),
+                    name: current_dir_name.clone(),
+                    atime: Timespec::default(),
+                    mtime: Timespec::default(),
+                    ctime: Timespec::default(),
+                    flags: OpenFlags::new(mode as u32),
+                    file: Vec::new(),
+                }));
+                // current_dir.lock().add(next_dir_name, new_dir.clone());
+                new_dir
+            }
+        };
+
+        current_dir = next_dir;
+        current_dir_name = next_dir_name.to_string();
+    }
+
+    0
 }
