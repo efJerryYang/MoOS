@@ -26,6 +26,7 @@ char testsuits_name[][49]={
 	"mount",
 	"umount",
 	"getdents",
+	"dup",
 };
 signed main(){
 	// execve("shell",0,0);

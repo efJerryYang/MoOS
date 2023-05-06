@@ -7,8 +7,8 @@ use spin::Mutex;
 
 use crate::{
     fs::{
-        file::{OpenFlags, RegFileINode, Dirent},
-        vfs::{INode, Timespec, FileType},
+        file::{Dirent, OpenFlags, RegFileINode},
+        vfs::{FileType, INode, Timespec},
     },
     mm::translated_byte_buffer,
     sbi::console_getchar,
@@ -272,7 +272,7 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
     let inode = open_file.inode.clone();
     let entries = match inode.lock().list() {
         Ok(entries) => entries,
-        Err(_) => return 4,  // TODO: Incorrect should return -1
+        Err(_) => return 4, // TODO: Incorrect should return -1
     };
 
     let mut bytes_written = 0;
@@ -294,7 +294,7 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
                 FileType::Dir => 0x4,
                 FileType::File => 0x8,
                 FileType::SymLink => 0xA,
-                
+
                 FileType::BlockDevice => 0x6,
                 FileType::CharDevice => 0x2,
                 FileType::NamedPipe => 0x1,
@@ -320,4 +320,44 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
     }
 
     bytes_written as isize
+}
+
+// SYSCALL_DUP => sys_dup(args[0] as isize),
+
+pub fn sys_dup(fd: isize) -> isize {
+    let fd = fd as usize;
+    let task = myproc();
+    let mut fd_manager = task.fd_manager.lock();
+
+    if fd >= fd_manager.len() {
+        return -1;
+    }
+
+    let file_descriptor = &fd_manager.fd_array[fd].clone();
+    // if !file_descriptor.readable && !file_descriptor.writable {
+    //     return -1;
+    // }
+
+    let open_file = file_descriptor.open_file.clone();
+    let inode = open_file.inode.clone();
+
+    let mut new_fd = -1;
+    for (i, fd) in fd_manager.fd_array.iter().enumerate() {
+        if !fd.readable && !fd.writable {
+            new_fd = i as isize;
+            break;
+        }
+    }
+
+    if new_fd == -1 {
+        new_fd = fd_manager.len() as isize;
+    }
+    
+    fd_manager.fd_array.push(FileDescriptor {
+        readable: file_descriptor.readable,
+        writable: file_descriptor.writable,
+        open_file: open_file,
+    });
+
+    new_fd
 }
