@@ -6,7 +6,7 @@ use alloc::{sync::Arc, boxed::Box, task, string::{String, ToString}, slice, vec:
 use lazy_static::lazy_static;
 use xmas_elf::ElfFile;
 
-use crate::{task::{task_list, proc::{sched, schedule, exec_from_elf, kill, clone}, cpu::mycpu, ProcessState}, sync::UPSafeCell, mm::{translated_byte_buffer, page_table::translate_str}, syscall::translate};
+use crate::{task::{task_list, proc::{sched, schedule, exec_from_elf, kill, clone}, cpu::mycpu, ProcessState, PCB}, sync::UPSafeCell, mm::{translated_byte_buffer, page_table::translate_str, MemorySet}, syscall::translate};
 
 /// task exits and submit an exit code
 pub unsafe fn sys_exit(exit_code: i32) -> !{
@@ -116,6 +116,7 @@ pub unsafe fn sys_waitpid(pid:isize,status:*mut isize,options: usize)->isize{
 					*status=(task_list.exclusive_access()[p].exit_code<<8)|(0);
 				}
 				task_list.exclusive_access()[p].state=ProcessState::KILLED;
+				task_list.exclusive_access()[p].memory_set=MemorySet::new_bare();
 				return p as isize;
 			}
 		}
@@ -131,6 +132,7 @@ pub unsafe fn sys_waitpid(pid:isize,status:*mut isize,options: usize)->isize{
 				*status=(x.exit_code<<8)|(0);
 			}
 			x.state=ProcessState::KILLED;
+			x.memory_set=MemorySet::new_bare();
 			return pid as isize;
 		}
 	}

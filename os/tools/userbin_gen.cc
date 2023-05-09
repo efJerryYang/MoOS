@@ -21,6 +21,7 @@ char* testsuits_name[]={
 	"exit",
 	"brk",
 	"execve",
+	"test_echo",
 	"fork",
 	"yield",
 	"clone",
