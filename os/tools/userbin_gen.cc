@@ -12,7 +12,11 @@ char* user_c_name[]={
 char* testsuits_name[]={
 	"getpid",
 	"getppid",
+	"read",
 	"write",
+	"openat",
+	"open",
+	"close",
 	"gettimeofday",
 	"sleep",
 	"wait",
@@ -26,7 +30,13 @@ char* testsuits_name[]={
 	"yield",
 	"clone",
 	"mount",
-	"umount"
+	"umount",
+	"getcwd",
+	"getdents",
+	"dup",
+	"dup2",
+	"mkdir_",
+	"chdir",
 };
 
 signed main(){

@@ -1,7 +1,7 @@
 use alloc::{task, vec::Vec};
 use xmas_elf::ElfFile;
 
-use crate::{mm::{MemorySet, memory_set::{self, KERNEL_SPACE, MapPermission, MapArea}, VirtAddr, translated_byte_buffer, page_table::{translate_str, PageTable}}, trap::{TrapFrame, trap_return, trap_handler}, config::{TRAPFRAME, TRAMPOLINE, KERNEL_STACK_SIZE, USER_STACK_SIZE}, syscall::translate, console::print};
+use crate::{mm::{MemorySet, memory_set::{self, KERNEL_SPACE, MapPermission, MapArea}, VirtAddr, translated_byte_buffer, page_table::{translate_str, PageTable}}, trap::{TrapFrame, trap_return, trap_handler}, config::{TRAPFRAME, TRAMPOLINE, KERNEL_STACK_SIZE, USER_STACK_SIZE, PAGE_SIZE}, syscall::translate, console::print};
 
 use super::{cpu::mycpu, task_list, PCB, ProcessState, __switch, ProcessContext};
 
@@ -13,6 +13,8 @@ pub unsafe fn clone(stack:usize)->usize{
 	let nowpid=mycpu().proc_idx;
 	tasks[pid].parent=nowpid;
 	tasks[pid].memory_set=MemorySet::from_existed_user(&tasks[nowpid].memory_set);
+	tasks[pid].heap_pos = VirtAddr::from(tasks[pid].memory_set.get_areas_end());
+	tasks[pid].heap_pos.0 += PAGE_SIZE;
 	tasks[pid].trapframe_ppn=tasks[pid].memory_set.translate(VirtAddr::from(TRAPFRAME).into()).unwrap().ppn();
 	*(tasks[pid].trapframe_ppn.get_mut() as *mut TrapFrame)=*(tasks[nowpid].trapframe_ppn.get_mut() as *mut TrapFrame);
 	(*(tasks[pid].trapframe_ppn.get_mut() as *mut TrapFrame)).x[10]=0;
@@ -25,17 +27,6 @@ pub unsafe fn clone(stack:usize)->usize{
 	
 	if(stack!=0){
 		(*(tasks[pid].trapframe_ppn.get_mut() as *mut TrapFrame)).x[2]=stack;
-		/*TODO */
-		// let mut nsp=(*(tasks[pid].trapframe_ppn.get_mut() as *mut TrapFrame)).x[2]&(!(USER_STACK_SIZE-1));
-		// nsp+=USER_STACK_SIZE;
-		// (*(tasks[pid].trapframe_ppn.get_mut() as *mut TrapFrame)).x[2]=nsp-16;
-		
-		// let stack_kernel: usize=translate(stack-1024+16);
-		// let stack_user=PageTable::from_token(task_list.exclusive_access()[pid].memory_set.token()).translate_va(VirtAddr::from(nsp-8)).unwrap().get_mut() as *mut u8 as usize+8;
-		// let stack_ori=core::slice::from_raw_parts(stack_kernel as *mut u8, 1024);
-		// let stack_new=core::slice::from_raw_parts_mut((stack_user-1024) as *mut u8, 1024);
-		// println!("a={:#x},b={:#x}",stack_kernel,stack_user);
-		// stack_new.copy_from_slice(stack_ori);
 	}
 	
 	tasks[pid].context=tasks[nowpid].context;

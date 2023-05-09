@@ -22,6 +22,7 @@ mod sbi;
 mod sync;
 mod mm;
 mod task;
+mod fs;
 
 pub mod syscall;
 pub mod trap;

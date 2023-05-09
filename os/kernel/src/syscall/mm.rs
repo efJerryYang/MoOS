@@ -8,35 +8,39 @@ use crate::{task::{task_list, cpu::mycpu}, mm::{MapPermission, VirtAddr, VirtPag
 
 pub fn sys_brk(_brk: usize) -> isize {
     let tasks = task_list.exclusive_access();
-    let end_ = tasks[mycpu().proc_idx].memory_set.get_areas_end();
-    let old_end = usize::from(VirtAddr::from(end_)) + PAGE_SIZE - 1;
-    //let new_end = ((_brk - 1 + PAGE_SIZE) / PAGE_SIZE) << PAGE_SIZE_BITS;
+    let end_: usize = tasks[mycpu().proc_idx].heap_pos.into();
+    // let old_end = usize::from(VirtAddr::from(end_)) + PAGE_SIZE - 1;
+    // //let new_end = ((_brk - 1 + PAGE_SIZE) / PAGE_SIZE) << PAGE_SIZE_BITS;
 
     if(_brk == 0){
-        // for v in tasks[mycpu().proc_idx].memory_set.areas.iter(){
-        //     println!("{} {}", usize::from(v.vpn_range.get_start()), usize::from(v.vpn_range.get_end()));
-        // }
-        return old_end as isize;
+        return end_ as isize;
     }
     
 
-    if(old_end == _brk){
-        return 0;
+    if(end_ == _brk){
+        0
     }
-    else if(old_end < _brk){
+    else if(end_ < _brk){
         let mset = &mut tasks[mycpu().proc_idx].memory_set;
-        let flag = mset.append_to(
-            VirtAddr::from(mset.areas.get(mset.areas.len() - 2).unwrap().vpn_range.get_start()), 
-            VirtAddr::from(_brk)
-        );
-        // for v in mset.areas.iter(){
-        //     println!("{} {}", usize::from(v.vpn_range.get_start()), usize::from(v.vpn_range.get_end()));
-        // }
-        if flag{
+        if(_brk < usize::from(VirtAddr::from(mset.get_areas_end())) + PAGE_SIZE){
+            tasks[mycpu().proc_idx].heap_pos.0 = _brk;
             return 0;
         }
         else{
-            return -1;
+            let flag = mset.append_to(
+                VirtAddr::from(mset.areas.get(mset.areas.len() - 2).unwrap().vpn_range.get_start()), 
+                VirtAddr::from(_brk)
+            );
+            // for v in mset.areas.iter(){
+            //     println!("{} {}", usize::from(v.vpn_range.get_start()), usize::from(v.vpn_range.get_end()));
+            // }
+            if flag{
+                tasks[mycpu().proc_idx].heap_pos.0 = _brk;
+                return 0;
+            }
+            else{
+                return -1;
+            }
         }
     }
     else{

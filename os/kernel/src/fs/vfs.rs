@@ -1,5 +1,6 @@
 use crate::fs::dev::DevError;
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
+use spin::Mutex;
 use core::any::Any;
 use core::fmt;
 use core::future::Future;
@@ -51,7 +52,7 @@ pub trait INode: Any + Sync + Send {
     }
 
     /// Create a new INode in the directory
-    fn create(&self, name: &str, type_: FileType, mode: u32) -> Result<Arc<dyn INode>> {
+    fn create(&self, name: &str, type_: FileType, mode: u32) -> Result<Arc<Mutex<dyn INode>>> {
         self.create2(name, type_, mode, 0)
     }
 
@@ -62,12 +63,12 @@ pub trait INode: Any + Sync + Send {
         type_: FileType,
         mode: u32,
         _data: usize,
-    ) -> Result<Arc<dyn INode>> {
+    ) -> Result<Arc<Mutex<dyn INode>>> {
         self.create(name, type_, mode)
     }
 
     /// Create a hard link `name` to `other`
-    fn link(&self, _name: &str, _other: &Arc<dyn INode>) -> Result<()> {
+    fn link(&self, _name: &str, _other: &Arc<Mutex<dyn INode>>) -> Result<()> {
         Err(FsError::NotSupported)
     }
 
@@ -78,12 +79,12 @@ pub trait INode: Any + Sync + Send {
 
     /// Move INode `self/old_name` to `target/new_name`.
     /// If `target` equals `self`, do rename.
-    fn move_(&self, _old_name: &str, _target: &Arc<dyn INode>, _new_name: &str) -> Result<()> {
+    fn move_(&self, _old_name: &str, _target: &Arc<Mutex<dyn INode>>, _new_name: &str) -> Result<()> {
         Err(FsError::NotSupported)
     }
 
     /// Find the INode `name` in the directory
-    fn find(&self, _name: &str) -> Result<Arc<dyn INode>> {
+    fn find(&self, _name: &str) -> Result<Arc<Mutex<dyn INode>>> {
         Err(FsError::NotSupported)
     }
 
@@ -97,6 +98,7 @@ pub trait INode: Any + Sync + Send {
         // a default and slow implementation
         let name = self.get_entry(id)?;
         let entry = self.find(&name)?;
+        let entry = entry.lock();
         Ok((entry.metadata()?, name))
     }
 
@@ -118,6 +120,12 @@ pub trait INode: Any + Sync + Send {
     /// This is used to implement dynamics cast.
     /// Simply return self in the implement of the function.
     fn as_any_ref(&self) -> &dyn Any;
+    
+    /// Get the file size of the inode.
+    fn file_size(&self) -> usize;
+
+    /// Get the file data of the inode.
+    fn file_data(&mut self) -> &mut Vec<u8>;
 }
 
 impl dyn INode {
@@ -140,12 +148,12 @@ impl dyn INode {
     }
 
     /// Lookup path from current INode, and do not follow symlinks
-    pub fn lookup(&self, path: &str) -> Result<Arc<dyn INode>> {
+    pub fn lookup(&self, path: &str) -> Result<Arc<Mutex<dyn INode>>> {
         self.lookup_follow(path, 0)
     }
 
     /// Lookup path from current INode, and follow symlinks at most `follow_times` times
-    pub fn lookup_follow(&self, path: &str, follow_times: usize) -> Result<Arc<dyn INode>> {
+    pub fn lookup_follow(&self, path: &str, follow_times: usize) -> Result<Arc<Mutex<dyn INode>>> {
         if self.metadata()?.type_ != FileType::Dir {
             return Err(FsError::NotDir);
         }
@@ -158,7 +166,7 @@ impl dyn INode {
         };
 
         while !rest_path.is_empty() {
-            if result.metadata()?.type_ != FileType::Dir {
+            if result.lock().metadata()?.type_ != FileType::Dir {
                 return Err(FsError::NotDir);
             }
             let name;
@@ -175,16 +183,16 @@ impl dyn INode {
             if name.is_empty() {
                 continue;
             }
-            let inode = result.find(&name)?;
+            let inode = result.lock().find(&name)?;
             // Handle symlink
-            if inode.metadata()?.type_ == FileType::SymLink && follow_times > 0 {
+            if inode.lock().metadata()?.type_ == FileType::SymLink && follow_times > 0 {
                 let mut content = [0u8; 256];
-                let len = inode.read_at(0, &mut content)?;
+                let len = inode.lock().read_at(0, &mut content)?;
                 let link_path =
                     String::from(str::from_utf8(&content[..len]).map_err(|_| FsError::NotDir)?);
                 // result remains unchanged
                 let new_path = link_path + "/" + &rest_path;
-                return result.lookup_follow(&new_path, follow_times - 1);
+                return result.lock().lookup_follow(&new_path, follow_times - 1);
             } else {
                 result = inode
             }
@@ -264,7 +272,7 @@ pub struct Metadata {
     pub rdev: usize, // (major << 8) | minor
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
 pub struct Timespec {
     pub sec: i64,
     pub nsec: i32,
@@ -349,7 +357,7 @@ pub trait FileSystem: Sync + Send {
     fn sync(&self) -> Result<()>;
 
     /// Get the root INode of the file system
-    fn root_inode(&self) -> Arc<dyn INode>;
+    fn root_inode(&self) -> Arc<Mutex<dyn INode>>;
 
     /// Get the file system information
     fn info(&self) -> FsInfo;

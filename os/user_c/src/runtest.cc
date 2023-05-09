@@ -7,6 +7,7 @@ char testsuits_name[][49]={
 	"getpid",
 	"getppid",
 	"write",
+	"read",
 	"gettimeofday",
 	"sleep",
 	"wait",
@@ -18,10 +19,20 @@ char testsuits_name[][49]={
 	"times",
 	"yield",
 	"clone",
+	"openat",
+	"open",
+	"close",
+	"getcwd",
 	"mount",
-	"umount"
+	"umount",
+	"getdents",
+	"dup",
+	"dup2",
+	"mkdir_",
+	"chdir",
 };
 signed main(){
+	// execve("shell",0,0);
 	int test_cc=sizeof(testsuits_name)/49;
 	printf("test cases:%d\n",test_cc);
 	for(int i=0;i<test_cc;i++){
@@ -30,6 +41,5 @@ signed main(){
 		}else wait(0);
 	}
 	// execve("shell",0,0);
-	close(0);
 	return 0;
 }
