@@ -2,12 +2,17 @@
 
 use core::mem::size_of;
 
-use alloc::{format, string::{ToString, String}, sync::Arc, vec::Vec};
+use alloc::{
+    format,
+    string::{String, ToString},
+    sync::Arc,
+    vec::Vec,
+};
 use spin::Mutex;
 
 use crate::{
     fs::{
-        file::{Dirent, OpenFlags, RegFileINode},
+        file::{Dirent, OpenFlags, RegFileINode, Stat},
         vfs::{FileType, INode, Timespec},
     },
     mm::translated_byte_buffer,
@@ -471,4 +476,59 @@ pub fn sys_chdir(path: &str) -> isize {
     let mut current_dir_name = String::from("/");
     task.cwd = current_dir.clone() + path + "/";
     0
+}
+
+// SYSCALL_FSSTAT => sys_fsstat(args[0] as isize, args[1] as *mut u8),
+
+pub fn sys_fsstat(fd: isize, buf: *mut u8) -> isize {
+    println!("sys_fsstat: fd: {}, buf: {:?}", fd, buf);
+    let fd = fd as usize;
+    let task = myproc();
+    let mut fd_manager = task.fd_manager.lock();
+
+    if fd >= fd_manager.len() {
+        return -1;
+    }
+
+    let file_descriptor = &fd_manager.fd_array[fd].clone();
+    // if !file_descriptor.readable {
+    //     return -1;
+    // }
+
+    let open_file = file_descriptor.open_file.clone();
+    let inode = open_file.inode.clone();
+
+    let mut buf_ptr = buf;
+    let mut bytes_written = 0;
+
+    let mut stat = Stat::new();
+
+    stat.st_dev = 0;
+    stat.st_ino = 0;
+    stat.st_mode = 0;
+    stat.st_nlink = 0;
+    stat.st_uid = 0;
+    stat.st_gid = 0;
+    stat.st_rdev = 0;
+    stat.st_size = 0;
+    stat.st_blksize = 0;
+    stat.st_blocks = 0;
+    stat.st_atime_sec = Timespec::default().sec as u64;
+    stat.st_atime_nsec = Timespec::default().nsec as u64;
+    stat.st_mtime_sec = Timespec::default().sec as u64;
+    stat.st_mtime_nsec = Timespec::default().nsec as u64;
+    stat.st_ctime_sec = Timespec::default().sec as u64;
+    stat.st_ctime_nsec = Timespec::default().nsec as u64;
+
+    println!("stat: {:?}", stat);
+
+    let stat_size = size_of::<Stat>();
+    println!("stat_size: {}", stat_size);
+    unsafe {
+        // core::ptr::copy_nonoverlapping(&stat as *const Stat as *const u8, buf_ptr, stat_size);
+    }
+    println!("after unsafe copy");
+    bytes_written += stat_size;
+
+    bytes_written as isize
 }
