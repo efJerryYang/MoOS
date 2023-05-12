@@ -1,5 +1,5 @@
 #!/bin/bash
-touch os_serial_output.txt && rm os_serial_output.txt
+touch os_serial_out.txt && rm os_serial_out.txt
 
 make local >makefile_stdout_stderr.txt 2>&1 &
 echo "Sleep 8 seconds to wait for QEMU to run. Makefile stderr and stdout are saved in makefile_stdout_stderr.txt"
@@ -29,8 +29,8 @@ while IFS=$'\n' read -r line; do
     passed=$(echo "$line" | awk '{print $3}')
     results=$(echo "$line" | awk '{$1=$2=$3=""; print $0}')
 
-    # printf "%-20s %-7s %-25s %s\n" "$name" "$all" "$passed" "$results"
-    printf "%-20s %-7s %-25s\n" "$name" "$all" "$passed"
+    printf "%-20s %-7s %-25s %s\n" "$name" "$all" "$passed" "$results"
+    # printf "%-20s %-7s %-25s\n" "$name" "$all" "$passed"
 
     all_total=$(expr $all_total + $all)
     passed_total=$(expr $passed_total + $passed)
@@ -56,3 +56,9 @@ echo "$failed_tests" | while IFS=$'\n' read -r line; do
         printf "%-20s %-7s %-25s %s\n" "$name" "$all" "$passed" "$results"
     fi
 done
+
+# Generated files
+echo ""
+echo "Generated files (ignored by git):"
+echo "Serial output of QEMU: os_serial_out.txt"
+echo "Makefile (make local): makefile_stdout_stderr.txt"

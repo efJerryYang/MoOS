@@ -92,7 +92,15 @@ static LOCK:AtomicU8=AtomicU8::new(0);
 pub fn rust_main() -> !{
 	clear_bss();
 	while(!LOCK.compare_exchange(0,1,Ordering::SeqCst,Ordering::SeqCst).is_ok()){}
-	println!("-----------NAIVE-OS-----------");
+	// println!("-----------NAIVE-OS-----------");
+	println!("");
+	println!("     _   _           ____   ______");
+	println!("    / | / |        / __  \\/ _____/");
+	println!("   /  |/  | ____  / /  / / /__");
+	println!("  / /| /| |/ __ \\/ /  / /\\___ \\");
+	println!(" / / |/ | / /_/ / /__/ /____/ /");
+	println!("/_/     |_\\____/\\_____/______/");
+	println!("");
 	trap::init();
 	mm::init();
 	unsafe {sie::set_stimer();}
