@@ -1,6 +1,6 @@
 //! File and filesystem-related syscalls
 
-use core::mem::size_of;
+use core::mem::{align_of, size_of};
 
 use alloc::{
     format,
@@ -323,6 +323,9 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
     // }
     unsafe {
         let ptr = buf.offset(core::mem::size_of::<Dirent>() as isize);
+        let len = len - core::mem::size_of::<Dirent>();
+        *ptr.offset(len as isize) = ".".as_bytes()[0];
+        *ptr.offset((len + 1) as isize) = "\0".as_bytes()[0];
     }
 
     println!("openat: fd: {}, buf: {:?}, len: {}", fd, buf, len);
@@ -546,7 +549,7 @@ pub fn sys_chdir(path: &str) -> isize {
 // SYSCALL_FSSTAT => sys_fstat(args[0] as isize, args[1] as *mut u8),
 
 pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
-    println!("sys_fsstat: fd: {}, buf: {:?}", fd, buf);
+    println!("openat: fd: {}, buf: {:?}", fd, buf);
     let fd = fd as usize;
     let task = myproc();
     let mut fd_manager = task.fd_manager.lock();
@@ -556,9 +559,9 @@ pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
     }
 
     let file_descriptor = &fd_manager.fd_array[fd].clone();
-    // if !file_descriptor.readable {
-    //     return -1;
-    // }
+    if !file_descriptor.readable {
+        return -1;
+    }
 
     let open_file = file_descriptor.open_file.clone();
     let inode = open_file.inode.clone();
@@ -568,35 +571,33 @@ pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
 
     let mut stat = Stat::new();
 
-    stat.st_dev = 0;
-    stat.st_ino = 0;
-    stat.st_mode = 0;
-    stat.st_nlink = 0;
-    stat.st_uid = 0;
-    stat.st_gid = 0;
-    stat.st_rdev = 0;
-    stat.st_size = 0;
-    stat.st_blksize = 0;
-    stat.st_blocks = 0;
-    stat.st_atime_sec = Timespec::default().sec as u64;
-    stat.st_atime_nsec = Timespec::default().nsec as u64;
-    stat.st_mtime_sec = Timespec::default().sec as u64;
-    stat.st_mtime_nsec = Timespec::default().nsec as u64;
-    stat.st_ctime_sec = Timespec::default().sec as u64;
-    stat.st_ctime_nsec = Timespec::default().nsec as u64;
+    // println!("stat: {:?}", stat);
 
-    println!("stat: {:?}", stat);
+    // let stat_size = size_of::<Stat>();
+    // println!("stat_size: {}", stat_size);
+    // unsafe {
+    //     core::ptr::copy_nonoverlapping(&stat as *const Stat as *const u8, buf_ptr, stat_size);
+    // }
+    // // println!("after unsafe copy");
+    // bytes_written += stat_size;
+    let alignment = align_of::<Stat>();
+    let align_offset = buf.align_offset(alignment);
+    let aligned_buf_ptr = if align_offset == 0 {
+        buf
+    } else {
+        unsafe { buf.add(align_offset) }
+    };
 
     let stat_size = size_of::<Stat>();
-    println!("stat_size: {}", stat_size);
     unsafe {
-        // core::ptr::copy_nonoverlapping(&stat as *const Stat as *const u8, buf_ptr, stat_size);
+        core::ptr::copy_nonoverlapping(
+            &stat as *const Stat as *const u8,
+            aligned_buf_ptr,
+            stat_size,
+        );
     }
-    println!("after unsafe copy");
     bytes_written += stat_size;
-
     bytes_written as isize;
-
     return 0;
 }
 
@@ -644,10 +645,6 @@ pub fn sys_unlinkat(fd: isize, path: &str, flags: usize) -> isize {
         };
     }
     let start_dir_path = if path == "./text.txt" {
-        println!("Hi, this is a text file.");
-        println!("syscalls testing success!");
-        println!("");
-        println!("");
         "/mnt/".to_string()
     } else {
         "/".to_string()

@@ -4,7 +4,11 @@ use crate::{
     sbi::console_getchar,
 };
 use _core::any::Any;
-use alloc::{string::{String, ToString}, sync::Arc, vec::Vec};
+use alloc::{
+    string::{String, ToString},
+    sync::Arc,
+    vec::Vec,
+};
 use spin::Mutex;
 pub struct File {
     inode: Arc<Mutex<dyn INode>>,
@@ -275,7 +279,7 @@ pub struct Dirent {
     pub d_off: i64,    // 到下一个dirent的偏移
     pub d_reclen: u16, // 当前dirent的长度
     pub d_type: u8,    // 文件类型
-                       // d_name: char[]; // 文件名, 该字段不包含在结构体中，因为它是一个不定长数组
+    // d_name: char[]; // 文件名, 该字段不包含在结构体中，因为它是一个不定长数组
     pub d_name: String,
 }
 
@@ -292,10 +296,11 @@ impl Dirent {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct Stat {
     pub st_dev: u64,
     pub st_ino: u64,
-    pub st_mode: u32,
+    pub st_mode: u64,
     pub st_nlink: u32,
     pub st_uid: u32,
     pub st_gid: u32,
@@ -314,22 +319,22 @@ pub struct Stat {
 impl Stat {
     pub fn new() -> Self {
         Self {
-            st_dev: 0,
-            st_ino: 0,
-            st_mode: 0,
-            st_nlink: 0,
+            st_dev: 1,
+            st_ino: 1,
+            st_mode: 1,
+            st_nlink: 1,
             st_uid: 0,
             st_gid: 0,
             st_rdev: 0,
             st_size: 0,
             st_blksize: 0,
             st_blocks: 0,
-            st_atime_sec: 0,
-            st_atime_nsec: 0,
-            st_mtime_sec: 0,
-            st_mtime_nsec: 0,
-            st_ctime_sec: 0,
-            st_ctime_nsec: 0,
+            st_atime_sec: Timespec::default().sec as u64,
+            st_atime_nsec: Timespec::default().nsec as u64,
+            st_mtime_sec: Timespec::default().sec as u64,
+            st_mtime_nsec: Timespec::default().nsec as u64,
+            st_ctime_sec: Timespec::default().sec as u64,
+            st_ctime_nsec: Timespec::default().nsec as u64,
         }
     }
 }
