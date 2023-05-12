@@ -73,7 +73,7 @@ pub trait INode: Any + Sync + Send {
     }
 
     /// Delete a hard link `name`
-    fn unlink(&self, _name: &str) -> Result<()> {
+    fn unlink(&mut self, _name: &str) -> Result<()> {
         Err(FsError::NotSupported)
     }
 
@@ -126,6 +126,9 @@ pub trait INode: Any + Sync + Send {
 
     /// Get the file data of the inode.
     fn file_data(&mut self) -> &mut Vec<u8>;
+
+    fn file_name(&self) -> String;
+    
 }
 
 impl dyn INode {
@@ -287,6 +290,7 @@ pub enum FileType {
     BlockDevice,
     NamedPipe,
     Socket,
+    Unknown,
 }
 
 /// Metadata of FileSystem

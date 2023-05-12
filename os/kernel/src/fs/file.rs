@@ -166,6 +166,13 @@ impl INode for RegFileINode {
     fn file_data(&mut self) -> &mut Vec<u8> {
         return &mut self.file;
     }
+    fn unlink(&mut self, _name: &str) -> Result<()> {
+        self.name = "null".to_string();
+        return Ok(());
+    }
+    fn file_name(&self) -> String {
+        return self.name.clone();
+    }
 }
 
 pub struct TerminalINode {
@@ -256,6 +263,9 @@ impl INode for TerminalINode {
 
     fn file_data(&mut self) -> &mut Vec<u8> {
         return &mut self.file;
+    }
+    fn file_name(&self) -> String {
+        return "null".to_string();
     }
 }
 

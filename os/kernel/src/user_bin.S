@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 34
+	.quad 35
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -37,7 +37,8 @@ _app_num:
 	.quad chdir_start
 	.quad fstat_start
 	.quad uname_start
-	.quad uname_end
+	.quad unlink_start
+	.quad unlink_end
 
 	.globl _app_names
 _app_names:
@@ -75,6 +76,7 @@ _app_names:
 	.string "chdir"
 	.string "fstat"
 	.string "uname"
+	.string "unlink"
 
 	.section .data
 	.global init_start
@@ -318,4 +320,11 @@ fstat_end:
 uname_start:
 	.incbin "../testbin/uname"
 uname_end:
+
+	.global unlink_start
+	.global unlink_end
+	.align 3
+unlink_start:
+	.incbin "../testbin/unlink"
+unlink_end:
 

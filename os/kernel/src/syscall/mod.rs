@@ -88,7 +88,7 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 		SYSCALL_MKDIRAT => sys_mkdirat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2] as usize),
 		SYSCALL_CHDIR => sys_chdir(&translate_str(get_token(), args[0] as *mut u8)),
 		SYSCALL_FSTAT => sys_fstat(args[0] as isize, args[1] as *mut u8),
-		// SYSCALL_UNLINKAT => sys_unlinkat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2]as usize),
+		SYSCALL_UNLINKAT => sys_unlinkat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2]as usize),
 		SYSCALL_UNAME => sys_uname(translate(args[0]) as *mut u8),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }

@@ -1,7 +1,10 @@
-use crate::{fs::{
-    file::{OpenFlags, RegFileINode, TerminalINode},
-    vfs::INode,
-}, mm::{PhysAddr, VirtAddr}};
+use crate::{
+    fs::{
+        file::{OpenFlags, RegFileINode, TerminalINode},
+        vfs::{INode, Metadata, Timespec, FileType},
+    },
+    mm::{PhysAddr, VirtAddr},
+};
 use alloc::string::{String, ToString};
 use core::arch::global_asm;
 use hashbrown::HashMap;
@@ -184,6 +187,32 @@ impl GlobalDentryCache {
         let old_path = path.to_string().clone();
         table.insert(path.to_string(), inode);
         table.get(&old_path).unwrap().clone()
+    }
+    pub fn remove(&self, path: &str) {
+        let mut table = self.table.lock();
+        table.remove(path);
+    }
+    pub fn unlink(&self, path: &str) {
+        let mut table = self.table.lock();
+        let mut v = table.get(path).unwrap().lock();
+        // let metadata = Metadata {
+        //     mode: 0,
+        //     blk_size: 0,
+        //     blocks: 0,
+        //     atime: Timespec::default(),
+        //     mtime: Timespec::default(),
+        //     ctime: Timespec::default(),
+        //     type_: FileType::Unknown,
+        //     nlinks: 0,
+        //     uid: 0,
+        //     gid: 0,
+        //     rdev: 0,
+        //     size: 0,
+        //     inode: 0,
+        //     dev: 0,
+        // };
+        // v.set_metadata(&metadata);
+        v.unlink(path);
     }
 }
 

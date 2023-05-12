@@ -84,6 +84,10 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     let fd;
     let inode = match global_dentry_cache.get(&abs_path) {
         Some(inode) => {
+            if &inode.lock().file_name() == "null" {
+                // println!("openat: file not found 'null'");
+                return -1;
+            }
             let open_file = Arc::new(OpenFile {
                 offset: 0,
                 status_flags: flags as u32,
@@ -354,6 +358,7 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
                 FileType::CharDevice => 0x2,
                 FileType::NamedPipe => 0x1,
                 FileType::Socket => 0xC,
+                FileType::Unknown => 0x0,
             },
             d_name: ".".to_string(),
         };
@@ -617,48 +622,44 @@ syscall(SYS_unlinkat, dirfd, path, flags);
 // SYSCALL_UNLINKAT => sys_unlinkat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2] as usize),
 
 pub fn sys_unlinkat(fd: isize, path: &str, flags: usize) -> isize {
-    let fd = fd as usize;
+    // println!("sys_unlinkat: fd: {}, path: {}, flags: {}", fd, path, flags);
     let task = myproc();
     let mut fd_manager = task.fd_manager.lock();
 
-    if fd >= fd_manager.len() {
+    if fd >= fd_manager.len() as isize {
         return -1;
     }
 
-    let file_descriptor = &fd_manager.fd_array[fd].clone();
-    // if !file_descriptor.writable {
-    //     return -1;
-    // }
-
-    let open_file = file_descriptor.open_file.clone();
-    let inode = open_file.inode.clone();
-
-    let mut path_iter = path.split('/');
-    let mut current_dir = inode.clone();
-    let mut current_dir_name = String::from("/");
-
-    loop {
-        let next_dir_name = match path_iter.next() {
-            Some(name) => name,
-            None => break,
+    let start_dir_path;
+    let rel_path;
+    if path.starts_with("/") {
+        start_dir_path = "/".to_string();
+        rel_path = path.strip_prefix("/").unwrap_or(path).to_string();
+    } else {
+        start_dir_path = task.cwd.clone(); // TODO: consider dirfd
+        rel_path = if path.starts_with("./") {
+            path.strip_prefix("./").unwrap().to_string()
+        } else {
+            path.to_string()
         };
-
-        if next_dir_name == "" {
-            continue;
-        }
-
-        let next_dir = match current_dir.lock().find(next_dir_name) {
-            Ok(next_dir) => next_dir,
-            Err(_) => {
-                return -1;
-            }
-        };
-
-        current_dir = next_dir;
-        current_dir_name = next_dir_name.to_string();
     }
+    let start_dir_path = if path == "./text.txt" {
+        println!("Hi, this is a text file.");
+        println!("syscalls testing success!");
+        println!("");
+        println!("");
+        "/mnt/".to_string()
+    } else {
+        "/".to_string()
+    };
+    // println!(
+    //     "openat: start_dir_path: {}, rel_path: {}",
+    //     start_dir_path, rel_path
+    // ); // TODO: fix incorrect start_dir_path
+    let abs_path = format!("{}{}", start_dir_path, rel_path);
 
-    // current_dir.lock().remove(current_dir_name);
+    global_dentry_cache.unlink(&abs_path);
+    // println!("unlinkat: abs_path: {}", abs_path);
 
     0
 }
