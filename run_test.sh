@@ -1,15 +1,47 @@
 #!/bin/bash
-touch os_serial_out.txt && rm os_serial_out.txt
 
-make local >makefile_stdout_stderr.txt 2>&1 &
-echo "Sleep 8 seconds to wait for QEMU to run. Makefile stderr and stdout are saved in makefile_stdout_stderr.txt"
+rm -f os_serial_out.txt makefile_stdout_stderr.txt
 
-count=8
-while [ $count -ge 1 ]; do
-    echo -n "$count, "
-    count=$((count - 1))
-    sleep 1
+touch os_serial_out.txt
+
+max_retries=5
+retries=0
+
+while [ $retries -lt $max_retries ]; do
+
+    make local >makefile_stdout_stderr.txt 2>&1 &
+    echo "Sleep 5 seconds to wait for QEMU to run. Makefile stderr and stdout are saved in makefile_stdout_stderr.txt"
+
+    count=5
+    code_executed=0
+    while [ $count -ge 1 ]; do
+        # 检查 os_serial_out.txt 的最后一行是否包含 'get pid=1 exited'
+        last_line=$(tail -n 1 os_serial_out.txt)
+        if [[ $last_line == *"get pid=1 exited"* ]]; then
+            echo "Code execution completed, exiting the loop."
+            code_executed=1
+            break
+        fi
+
+        echo -n "$count, "
+        count=$((count - 1))
+        sleep 1
+    done
+
+    if [ $code_executed -eq 1 ]; then
+        break
+    else
+        echo "Code execution timed out. Retrying..."
+        retries=$((retries + 1))
+    fi
 done
+
+if [ $retries -eq $max_retries ]; then
+    echo "Reached maximum retries. Exiting..."
+else
+    echo "Code executed successfully within retries."
+fi
+
 echo "0"
 
 pgrep qemu | xargs kill -s SIGINT
@@ -56,6 +88,8 @@ echo "$failed_tests" | while IFS=$'\n' read -r line; do
         printf "%-20s %-7s %-25s %s\n" "$name" "$all" "$passed" "$results"
     fi
 done
+echo ""
+echo "Your score is $passed_total / $all_total"
 
 # Generated files
 echo ""
