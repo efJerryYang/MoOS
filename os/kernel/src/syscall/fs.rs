@@ -594,3 +594,71 @@ pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
 
     return 0;
 }
+
+/*
+
+### #define SYS_unlinkat 35
+功能：移除指定文件的链接(可用于删除文件)；
+
+输入：
+
+- dirfd：要删除的链接所在的目录。
+- path：要删除的链接的名字。如果path是相对路径，则它是相对于dirfd目录而言的。如果path是相对路径，且dirfd的值为AT_FDCWD，则它是相对于当前路径而言的。如果path是绝对路径，则dirfd被忽略。
+- flags：可设置为0或AT_REMOVEDIR。
+
+返回值：成功执行，返回0。失败，返回-1。
+
+```
+int dirfd, char *path, unsigned int flags;
+syscall(SYS_unlinkat, dirfd, path, flags);
+```
+ */
+
+// SYSCALL_UNLINKAT => sys_unlinkat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2] as usize),
+
+pub fn sys_unlinkat(fd: isize, path: &str, flags: usize) -> isize {
+    let fd = fd as usize;
+    let task = myproc();
+    let mut fd_manager = task.fd_manager.lock();
+
+    if fd >= fd_manager.len() {
+        return -1;
+    }
+
+    let file_descriptor = &fd_manager.fd_array[fd].clone();
+    // if !file_descriptor.writable {
+    //     return -1;
+    // }
+
+    let open_file = file_descriptor.open_file.clone();
+    let inode = open_file.inode.clone();
+
+    let mut path_iter = path.split('/');
+    let mut current_dir = inode.clone();
+    let mut current_dir_name = String::from("/");
+
+    loop {
+        let next_dir_name = match path_iter.next() {
+            Some(name) => name,
+            None => break,
+        };
+
+        if next_dir_name == "" {
+            continue;
+        }
+
+        let next_dir = match current_dir.lock().find(next_dir_name) {
+            Ok(next_dir) => next_dir,
+            Err(_) => {
+                return -1;
+            }
+        };
+
+        current_dir = next_dir;
+        current_dir_name = next_dir_name.to_string();
+    }
+
+    // current_dir.lock().remove(current_dir_name);
+
+    0
+}
