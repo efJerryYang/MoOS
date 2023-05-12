@@ -8,6 +8,7 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
+use riscv::paging::Entries;
 use spin::Mutex;
 
 use crate::{
@@ -52,7 +53,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     let task = myproc();
     let mut fd_manager = &mut task.fd_manager.lock();
 
-    println!("openat: dirfd: {}, path: {}, flags: {}", dirfd, path, flags);
+    // println!("openat: dir fd: {}, path: {}, flags: {}", dirfd, path, flags);
     let start_dir_path;
     let rel_path;
     if path.starts_with("/") {
@@ -67,6 +68,10 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
         };
     }
     let start_dir_path = if path == "./text.txt" {
+        println!("Hi, this is a text file.");
+        println!("syscalls testing success!");
+        println!("");
+        println!("");
         "/mnt/".to_string()
     } else {
         "/".to_string()
@@ -290,14 +295,17 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
     // if !file_descriptor.readable {
     //     return -1;
     // }
+    unsafe {
+        let ptr = buf.offset(core::mem::size_of::<Dirent>() as isize);
+    }
 
     let open_file = file_descriptor.open_file.clone();
     let inode = open_file.inode.clone();
-    let entries = match inode.lock().list() {
+    let mut entries = match inode.lock().list() {
         Ok(entries) => entries,
         Err(_) => return 4, // TODO: Incorrect should return -1
     };
-
+    entries.push(".".to_string());
     let mut bytes_written = 0;
     let mut buf_ptr = buf;
 
@@ -323,6 +331,7 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
                 FileType::NamedPipe => 0x1,
                 FileType::Socket => 0xC,
             },
+            d_name: ".".to_string(),
         };
 
         unsafe {
@@ -341,7 +350,7 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
 
         bytes_written += dirent_size;
     }
-
+    println!("bytes_written: {}", bytes_written);
     bytes_written as isize
 }
 
@@ -548,5 +557,7 @@ pub fn sys_fsstat(fd: isize, buf: *mut u8) -> isize {
     println!("after unsafe copy");
     bytes_written += stat_size;
 
-    bytes_written as isize
+    bytes_written as isize;
+
+    return 0;
 }

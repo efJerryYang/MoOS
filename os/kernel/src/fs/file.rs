@@ -4,7 +4,7 @@ use crate::{
     sbi::console_getchar,
 };
 use _core::any::Any;
-use alloc::{string::String, sync::Arc, vec::Vec};
+use alloc::{string::{String, ToString}, sync::Arc, vec::Vec};
 use spin::Mutex;
 pub struct File {
     inode: Arc<Mutex<dyn INode>>,
@@ -266,6 +266,7 @@ pub struct Dirent {
     pub d_reclen: u16, // 当前dirent的长度
     pub d_type: u8,    // 文件类型
                        // d_name: char[]; // 文件名, 该字段不包含在结构体中，因为它是一个不定长数组
+    pub d_name: String,
 }
 
 impl Dirent {
@@ -275,6 +276,7 @@ impl Dirent {
             d_off: 0,
             d_reclen: 0,
             d_type: 0,
+            d_name: ".".to_string(),
         }
     }
 }
