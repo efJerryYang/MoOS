@@ -194,13 +194,35 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
             len as isize
         }
         other => {
-            println!("sys_write: fd: {}, buf: {:?}, len: {}", fd, buf, len);
+            // println!("sys_write: fd: {}, buf: {:?}, len: {}", fd, buf, len);
             if other >= fd_manager.len() {
+                // println!(
+                //     "sys_write: fd: {} not exist (max: {})",
+                //     fd,
+                //     fd_manager.len()
+                // );
                 return -1;
             }
             let file_descriptor = &fd_manager.fd_array[other];
             if !file_descriptor.writable {
+                // println!("sys_write: fd: {} not writable", fd);
                 return -1;
+            }
+            // if is stdout
+            if !file_descriptor.readable {
+                // println!("redirect to stdout");
+                let buffers = translated_byte_buffer(
+                    task_list.exclusive_access()[mycpu().proc_idx]
+                        .memory_set
+                        .token(),
+                    buf,
+                    len,
+                );
+                for buffer in buffers {
+                    let str = core::str::from_utf8(buffer).unwrap();
+                    print!("{}", str);
+                }
+                return len as isize;
             }
 
             let mut open_file = file_descriptor.open_file.clone();
@@ -368,9 +390,9 @@ pub fn sys_dup(fd: isize) -> isize {
     }
 
     let file_descriptor = &fd_manager.fd_array[fd].clone();
-    // if !file_descriptor.readable && !file_descriptor.writable {
-    //     return -1;
-    // }
+    if !file_descriptor.readable && !file_descriptor.writable {
+        return -1;
+    }
 
     let open_file = file_descriptor.open_file.clone();
     let inode = open_file.inode.clone();
@@ -392,7 +414,6 @@ pub fn sys_dup(fd: isize) -> isize {
         writable: file_descriptor.writable,
         open_file: open_file,
     });
-
     new_fd
 }
 
@@ -410,27 +431,37 @@ pub fn sys_dup3(fd: isize, new_fd: isize, flags: isize) -> isize {
     }
 
     let file_descriptor = &fd_manager.fd_array[fd].clone();
-    // if !file_descriptor.readable && !file_descriptor.writable {
-    //     return -1;
-    // }
+    // println!(
+    //     "file_descriptor: readable: {}, writable: {}",
+    //     file_descriptor.readable, file_descriptor.writable
+    // );
+    if !file_descriptor.readable && !file_descriptor.writable {
+        return -1;
+    }
 
     let open_file = file_descriptor.open_file.clone();
     let inode = open_file.inode.clone();
 
     if new_fd >= fd_manager.len() {
-        fd_manager.fd_array.push(FileDescriptor {
-            readable: file_descriptor.readable,
-            writable: file_descriptor.writable,
-            open_file: open_file,
-        });
-    } else {
-        fd_manager.fd_array[new_fd] = FileDescriptor {
-            readable: file_descriptor.readable,
-            writable: file_descriptor.writable,
-            open_file: open_file,
-        };
+        for _ in fd_manager.len()..new_fd + 1 {
+            fd_manager.fd_array.push(FileDescriptor {
+                readable: false,
+                writable: false,
+                open_file: Arc::new(OpenFile::new()),
+            });
+        }
+        // println!(
+        //     "new_fd: {}, fd_manager.len(): {}",
+        //     new_fd,
+        //     fd_manager.fd_array.len()
+        // );
     }
-
+    fd_manager.fd_array[new_fd] = FileDescriptor {
+        readable: file_descriptor.readable,
+        writable: file_descriptor.writable,
+        open_file: open_file,
+    };
+    // println!("new_fd: {}", new_fd);
     new_fd as isize
 }
 
