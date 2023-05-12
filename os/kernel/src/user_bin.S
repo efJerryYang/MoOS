@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 33
+	.quad 38
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -36,7 +36,12 @@ _app_num:
 	.quad mkdir__start
 	.quad chdir_start
 	.quad fstat_start
-	.quad fstat_end
+	.quad unlink_start
+	.quad uname_start
+	.quad pipe_start
+	.quad mmap_start
+	.quad munmap_start
+	.quad munmap_end
 
 	.globl _app_names
 _app_names:
@@ -73,6 +78,11 @@ _app_names:
 	.string "mkdir_"
 	.string "chdir"
 	.string "fstat"
+	.string "unlink"
+	.string "uname"
+	.string "pipe"
+	.string "mmap"
+	.string "munmap"
 
 	.section .data
 	.global init_start
@@ -309,4 +319,39 @@ chdir_end:
 fstat_start:
 	.incbin "../testbin/fstat"
 fstat_end:
+
+	.global unlink_start
+	.global unlink_end
+	.align 3
+unlink_start:
+	.incbin "../testbin/unlink"
+unlink_end:
+
+	.global uname_start
+	.global uname_end
+	.align 3
+uname_start:
+	.incbin "../testbin/uname"
+uname_end:
+
+	.global pipe_start
+	.global pipe_end
+	.align 3
+pipe_start:
+	.incbin "../testbin/pipe"
+pipe_end:
+
+	.global mmap_start
+	.global mmap_end
+	.align 3
+mmap_start:
+	.incbin "../testbin/mmap"
+mmap_end:
+
+	.global munmap_start
+	.global munmap_end
+	.align 3
+munmap_start:
+	.incbin "../testbin/munmap"
+munmap_end:
 

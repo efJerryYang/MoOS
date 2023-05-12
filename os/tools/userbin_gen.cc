@@ -38,6 +38,11 @@ char* testsuits_name[]={
 	"mkdir_",
 	"chdir",
 	"fstat",
+	"unlink",
+	"uname",
+	"pipe",
+	"mmap",
+	"munmap",
 };
 
 signed main(){

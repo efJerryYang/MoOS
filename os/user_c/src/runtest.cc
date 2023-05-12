@@ -31,6 +31,11 @@ char testsuits_name[][49]={
 	"mkdir_",
 	"chdir",
 	"fstat",
+	"unlink",
+	// "uname",
+	// "pipe",
+	// "mmap",
+	// "munmap",
 };
 signed main(){
 	// execve("shell",0,0);
