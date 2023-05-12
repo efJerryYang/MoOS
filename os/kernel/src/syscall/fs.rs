@@ -87,10 +87,24 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
 
             let file_descriptor = FileDescriptor {
                 open_file: open_file.clone(),
-                readable: flags as u32 & OpenFlags::RDONLY.bits() != 0,
-                writable: flags as u32 & OpenFlags::WRONLY.bits() != 0,
+                readable: ((flags as u32 ^ OpenFlags::RDONLY.bits())
+                    | (flags as u32 ^ OpenFlags::RDWR.bits()))
+                    != 0,
+                writable: ((flags as u32 ^ OpenFlags::WRONLY.bits())
+                    | (flags as u32 ^ OpenFlags::RDWR.bits()))
+                    != 0,
             };
-
+            // println!(
+            //     "openat: file_descriptor: {}, {}, {}",
+            //     file_descriptor.readable,
+            //     file_descriptor.writable,
+            //     file_descriptor.open_file.status_flags
+            // );
+            // println!(
+            //     "flags bits: input: {}, std: {}",
+            //     flags as u32,
+            //     OpenFlags::RDWR.bits()
+            // );
             for (i, fd_ref) in fd_manager.fd_array.iter().enumerate() {
                 if Arc::ptr_eq(&fd_ref.open_file.inode, &inode) {
                     fd_manager.fd_array[i] = file_descriptor;
@@ -127,8 +141,12 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
             // update fd manager
             let file_descriptor = FileDescriptor {
                 open_file: open_file.clone(),
-                readable: flags as u32 & OpenFlags::RDONLY.bits() != 0,
-                writable: flags as u32 & OpenFlags::WRONLY.bits() != 0,
+                readable: ((flags as u32 ^ OpenFlags::RDONLY.bits())
+                    | (flags as u32 ^ OpenFlags::RDWR.bits()))
+                    != 0,
+                writable: ((flags as u32 ^ OpenFlags::WRONLY.bits())
+                    | (flags as u32 ^ OpenFlags::RDWR.bits()))
+                    != 0,
             };
             fd = fd_manager.len();
             fd_manager.insert(file_descriptor);
