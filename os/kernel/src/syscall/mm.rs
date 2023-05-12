@@ -1,10 +1,10 @@
 use alloc::task;
 
-use crate::{task::{task_list, cpu::mycpu}, mm::{MapPermission, VirtAddr, VirtPageNum}, config::{PAGE_SIZE, PAGE_SIZE_BITS}};
-
-
-
-
+use crate::{
+    config::{PAGE_SIZE, PAGE_SIZE_BITS},
+    mm::{MapPermission, VirtAddr, VirtPageNum},
+    task::{cpu::mycpu, task_list},
+};
 
 pub fn sys_brk(_brk: usize) -> isize {
     let tasks = task_list.exclusive_access();
@@ -12,55 +12,61 @@ pub fn sys_brk(_brk: usize) -> isize {
     // let old_end = usize::from(VirtAddr::from(end_)) + PAGE_SIZE - 1;
     // //let new_end = ((_brk - 1 + PAGE_SIZE) / PAGE_SIZE) << PAGE_SIZE_BITS;
 
-    if(_brk == 0){
+    if (_brk == 0) {
         return end_ as isize;
     }
-    
 
-    if(end_ == _brk){
+    if (end_ == _brk) {
         0
-    }
-    else if(end_ < _brk){
+    } else if (end_ < _brk) {
         let mset = &mut tasks[mycpu().proc_idx].memory_set;
-        if(_brk < usize::from(VirtAddr::from(mset.get_areas_end())) + PAGE_SIZE){
+        if (_brk < usize::from(VirtAddr::from(mset.get_areas_end())) + PAGE_SIZE) {
             tasks[mycpu().proc_idx].heap_pos.0 = _brk;
             return 0;
-        }
-        else{
+        } else {
             let flag = mset.append_to(
-                VirtAddr::from(mset.areas.get(mset.areas.len() - 2).unwrap().vpn_range.get_start()), 
-                VirtAddr::from(_brk)
+                VirtAddr::from(
+                    mset.areas
+                        .get(mset.areas.len() - 2)
+                        .unwrap()
+                        .vpn_range
+                        .get_start(),
+                ),
+                VirtAddr::from(_brk),
             );
             // for v in mset.areas.iter(){
             //     println!("{} {}", usize::from(v.vpn_range.get_start()), usize::from(v.vpn_range.get_end()));
             // }
-            if flag{
+            if flag {
                 tasks[mycpu().proc_idx].heap_pos.0 = _brk;
                 return 0;
-            }
-            else{
+            } else {
                 return -1;
             }
         }
-    }
-    else{
+    } else {
         // need to change
         let mset = &mut tasks[mycpu().proc_idx].memory_set;
         let flag = mset.shrink_to(
-            VirtAddr::from(mset.areas.get(mset.areas.len() - 2).unwrap().vpn_range.get_start()), 
-            VirtAddr::from(_brk)
+            VirtAddr::from(
+                mset.areas
+                    .get(mset.areas.len() - 2)
+                    .unwrap()
+                    .vpn_range
+                    .get_start(),
+            ),
+            VirtAddr::from(_brk),
         );
-        if flag{
+        if flag {
             return 0;
-        }
-        else{
+        } else {
             return -1;
         }
-        
+
         // if let Some(area) = mset
         //     .get_areas()
         //     .iter_mut()
-        //     .find(|area| 
+        //     .find(|area|
         //         (area.vpn_range.get_start() <= (_brk / PAGE_SIZE).into()) &&
         //         (area.vpn_range.get_end() >= (_brk / PAGE_SIZE).into()))
         // {
@@ -72,11 +78,10 @@ pub fn sys_brk(_brk: usize) -> isize {
     }
 }
 
-pub fn sys_mmap(start: *mut usize, len: usize, prot: i32, flag: i32, fd: i32, off: usize) -> isize{
-
+pub fn sys_mmap(start: *mut usize, len: usize, prot: i32, flag: i32, fd: i32, off: usize) -> isize {
     return 0;
 }
 
-pub fn sys_munmap(start: *mut usize, len: usize) -> isize{
+pub fn sys_munmap(start: *mut usize, len: usize) -> isize {
     return 0;
 }
