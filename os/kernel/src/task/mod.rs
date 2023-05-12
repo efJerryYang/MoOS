@@ -1,6 +1,6 @@
 use crate::{
     fs::{
-        file::{OpenFlags, RegFileINode, TerminalINode},
+        file::{OpenFlags, RegFileINode, TerminalINode, PipeINode},
         vfs::{INode, Metadata, Timespec, FileType},
     },
     mm::{PhysAddr, VirtAddr},
@@ -94,6 +94,22 @@ impl OpenFile {
             inode: Arc::new(Mutex::new(TerminalINode::new_stderr())),
         }
     }
+
+    pub fn new_pipe_read() -> Self {
+        Self {
+            offset: 0,
+            status_flags: 0,
+            inode: Arc::new(Mutex::new(PipeINode::new_pipe_read())),
+        }
+    }
+
+    pub fn new_pipe_write() -> Self {
+        Self {
+            offset: 0,
+            status_flags: 0,
+            inode: Arc::new(Mutex::new(PipeINode::new_pipe_write())),
+        }
+    }
 }
 pub struct GlobalOpenFileTable {
     table: Arc<Mutex<Vec<OpenFile>>>,
@@ -164,6 +180,21 @@ impl FdManager {
     }
     pub fn remove(&mut self, fd: usize) -> FileDescriptor {
         self.fd_array.remove(fd)
+    }
+    pub fn alloc_fd(&mut self) -> usize {
+        let mut i = 0;
+        // while i < self.fd_array.len() {
+        //     if self.fd_array[i].open_file.inode.lock().get_type() == INodeType::NULL {
+        //         return i;
+        //     }
+        //     i += 1;
+        // }
+        self.fd_array.push(FileDescriptor {
+            open_file: Arc::new(OpenFile::new()),
+            readable: false,
+            writable: false,
+        });
+        self.fd_array.len() - 1
     }
 }
 pub struct GlobalInodeTable {

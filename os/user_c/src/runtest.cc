@@ -33,7 +33,7 @@ char testsuits_name[][49]={
 	"fstat",
 	"uname",
 	"unlink",
-	// "pipe",
+	"pipe",
 	"mmap",
 	"munmap",
 };

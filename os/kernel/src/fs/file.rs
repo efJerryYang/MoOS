@@ -338,3 +338,103 @@ impl Stat {
         }
     }
 }
+
+pub struct PipeINode {
+    pub readable: bool,
+    pub writable: bool,
+    
+    pub pipe:bool,
+    pub read_pos: usize,
+    pub write_pos: usize,
+    pub file: Vec<u8>,
+}
+
+impl PipeINode {
+    pub fn new() -> Self {
+        Self {
+            readable: true,
+            writable: true,
+            pipe: true,
+            read_pos: 0,
+            write_pos: 0,
+            file: Vec::new(),
+        }
+    }
+    pub fn new_pipe_read() -> Self {
+        Self {
+            readable: true,
+            writable: false,
+            pipe: true,
+            read_pos: 0,
+            write_pos: 0,
+            file: Vec::new(),
+        }
+    }
+
+    pub fn new_pipe_write() -> Self {
+        Self {
+            readable: false,
+            writable: true,
+            pipe: true,
+            read_pos: 0,
+            write_pos: 0,
+            file: Vec::new(),
+        }
+    }
+}
+
+impl INode for PipeINode {
+    fn read_at(&self, _offset: usize, buf: &mut [u8]) -> Result<usize> {
+        if !self.readable {
+            return Err(FsError::InvalidParam);
+        }
+
+        let len = self.file.len();
+        if len == 0 {
+            return Err(FsError::Again);
+        }
+
+        let mut i = 0;
+        for b in buf {
+            *b = self.file[i];
+            i += 1;
+        }
+
+        Ok(len)
+    }
+
+    fn write_at(&self, _offset: usize, buf: &[u8]) -> Result<usize> {
+        if !self.writable {
+            return Err(FsError::InvalidParam);
+        }
+
+        let mut len = 0;
+        for b in buf {
+            // self.file.push(*b);
+            len += 1;
+        }
+
+        Ok(len)
+    }
+
+    // Implement other required INode methods as needed or with default behavior.
+
+    fn poll(&self) -> Result<PollStatus> {
+        Ok(PollStatus::default())
+    }
+
+    fn as_any_ref(&self) -> &dyn _core::any::Any {
+        return &1;
+    }
+
+    fn file_size(&self) -> usize {
+        return 0;
+    }
+
+    fn file_data(&mut self) -> &mut Vec<u8> {
+        return &mut self.file;
+    }
+    fn file_name(&self) -> String {
+        return "null".to_string();
+    }
+}

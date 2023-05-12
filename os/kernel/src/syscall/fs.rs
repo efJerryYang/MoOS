@@ -13,7 +13,7 @@ use spin::Mutex;
 
 use crate::{
     fs::{
-        file::{Dirent, OpenFlags, RegFileINode, Stat},
+        file::{Dirent, OpenFlags, PipeINode, RegFileINode, Stat},
         vfs::{FileType, INode, Timespec},
     },
     mm::translated_byte_buffer,
@@ -657,6 +657,26 @@ pub fn sys_unlinkat(fd: isize, path: &str, flags: usize) -> isize {
 
     global_dentry_cache.unlink(&abs_path);
     // println!("unlinkat: abs_path: {}", abs_path);
+
+    0
+}
+
+// SYSCALL_PIPE2 => sys_pipe2(translate(args[0]) as *mut usize),
+
+pub fn sys_pipe2(pipe: *mut [usize; 2]) -> isize {
+    let task = myproc();
+    let mut fd_manager = task.fd_manager.lock();
+
+    let mut pipe = unsafe { &mut *pipe };
+
+    let read_fd = fd_manager.alloc_fd();
+    let write_fd = fd_manager.alloc_fd();
+
+    fd_manager.fd_array[read_fd].open_file = Arc::new(OpenFile::new_pipe_read());
+    fd_manager.fd_array[write_fd].open_file = Arc::new(OpenFile::new_pipe_write());
+
+    pipe[0] = read_fd;
+    pipe[1] = write_fd;
 
     0
 }
