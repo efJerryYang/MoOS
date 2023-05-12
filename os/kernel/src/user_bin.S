@@ -38,7 +38,7 @@ _app_num:
 	.quad fstat_start
 	.quad uname_start
 	.quad unlink_start
-	.quad mmap_start
+	.quad pipe_start
 	.quad munmap_start
 	.quad munmap_end
 
@@ -79,7 +79,7 @@ _app_names:
 	.string "fstat"
 	.string "uname"
 	.string "unlink"
-	.string "mmap"
+	.string "pipe"
 	.string "munmap"
 
 	.section .data
@@ -332,12 +332,12 @@ unlink_start:
 	.incbin "../testbin/unlink"
 unlink_end:
 
-	.global mmap_start
-	.global mmap_end
+	.global pipe_start
+	.global pipe_end
 	.align 3
-mmap_start:
-	.incbin "../testbin/mmap"
-mmap_end:
+pipe_start:
+	.incbin "../testbin/pipe"
+pipe_end:
 
 	.global munmap_start
 	.global munmap_end

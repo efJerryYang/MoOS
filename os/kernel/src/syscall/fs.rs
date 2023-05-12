@@ -247,7 +247,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 }
 
 pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
-    println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
+    // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
     let task = myproc();
     let fd_manager = task.fd_manager.lock();
 
@@ -264,17 +264,17 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
             return 0;
         }
         other => {
-            println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
+            // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
             if other >= fd_manager.len() {
                 return -1;
             }
             let file_descriptor = &fd_manager.fd_array[other];
-            println!(
-                "file_descriptor = {}, {}, {}",
-                file_descriptor.readable,
-                file_descriptor.writable,
-                file_descriptor.open_file.inode.lock().file_size()
-            );
+            // println!(
+            //     "file_descriptor = {}, {}, {}",
+            //     file_descriptor.readable,
+            //     file_descriptor.writable,
+            //     file_descriptor.open_file.inode.lock().file_size()
+            // );
             // if !file_descriptor.readable {
             //     return -1;
             // }
@@ -287,7 +287,7 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
             // if open_file.offset >= inode.file_size() as usize {
             //     return 0;
             // }
-            println!("fs.rs:223 - sys_read: fd {}", fd);
+            // println!("fs.rs:223 - sys_read: fd {}", fd);
 
             let mut buffers = translated_byte_buffer(task.memory_set.token(), buf, len);
             for buffer in buffers {
@@ -301,7 +301,7 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
                     }
                 }
             }
-            println!("fs.rs:237 - sys_read: fd {}", fd);
+            // println!("fs.rs:237 - sys_read: fd {}", fd);
             read_bytes as isize
         }
     }
