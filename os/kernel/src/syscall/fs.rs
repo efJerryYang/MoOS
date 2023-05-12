@@ -76,10 +76,10 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     } else {
         "/".to_string()
     };
-    println!(
-        "openat: start_dir_path: {}, rel_path: {}",
-        start_dir_path, rel_path
-    ); // TODO: fix incorrect start_dir_path
+    // println!(
+    //     "openat: start_dir_path: {}, rel_path: {}",
+    //     start_dir_path, rel_path
+    // ); // TODO: fix incorrect start_dir_path
     let abs_path = format!("{}{}", start_dir_path, rel_path);
     let fd;
     let inode = match global_dentry_cache.get(&abs_path) {
@@ -299,6 +299,8 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
         let ptr = buf.offset(core::mem::size_of::<Dirent>() as isize);
     }
 
+    println!("openat: fd: {}, buf: {:?}, len: {}", fd, buf, len);
+    // println!(".");
     let open_file = file_descriptor.open_file.clone();
     let inode = open_file.inode.clone();
     let mut entries = match inode.lock().list() {
