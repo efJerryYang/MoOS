@@ -34,8 +34,8 @@ char testsuits_name[][49]={
 	"uname",
 	"unlink",
 	// "pipe",
-	// "mmap",
-	// "munmap",
+	"mmap",
+	"munmap",
 };
 signed main(){
 	// execve("shell",0,0);

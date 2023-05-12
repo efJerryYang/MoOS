@@ -54,7 +54,7 @@ pub unsafe fn trap_handler() -> ! {
 		Trap::Exception(Exception::UserEnvCall) => {
 			let mut cx:&mut TrapFrame=task_list.exclusive_access()[mycpu().proc_idx].trapframe_ppn.get_mut();
 			cx.sepc += 4;
-            let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
+            let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12], cx.x[13], cx.x[14],cx.x[15]]) as usize;
 			cx=task_list.exclusive_access()[mycpu().proc_idx].trapframe_ppn.get_mut();
 			cx.x[10]=result;
         }

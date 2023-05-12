@@ -41,8 +41,8 @@ char* testsuits_name[]={
 	"uname",
 	"unlink",
 	// "pipe",
-	// "mmap",
-	// "munmap",
+	"mmap",
+	"munmap",
 };
 
 signed main(){

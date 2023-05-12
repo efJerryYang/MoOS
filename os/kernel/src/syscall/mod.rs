@@ -62,7 +62,7 @@ pub fn translate(ptr: usize)-> usize{
 }
 
 /// handle syscall exception with `syscall_id` and other arguments
-pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+pub unsafe fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
     match syscall_id {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
         SYSCALL_EXIT => sys_exit(args[0] as i32),
@@ -90,6 +90,8 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 		SYSCALL_FSTAT => sys_fstat(args[0] as isize, translate(args[1]) as *mut u8),
 		SYSCALL_UNLINKAT => sys_unlinkat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2]as usize),
 		SYSCALL_UNAME => sys_uname(translate(args[0]) as *mut u8),
+		SYSCALL_MUNMAP => sys_munmap(args[0] as *mut usize, args[1] as usize),
+		SYSCALL_MMAP => sys_mmap(args[0] as *mut usize, args[1] as usize, args[2] as i32, args[3] as i32, args[4] as i32, args[5] as usize),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }
