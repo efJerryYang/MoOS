@@ -19,10 +19,10 @@ const SYSCALL_MOUNT: usize = 40;
 const SYSCALL_CHDIR: usize = 49;
 const SYSCALL_OPENAT: usize = 56;
 const SYSCALL_CLOSE: usize = 57;
-const SYS_GETDENTS64: usize = 61;
+const SYSCALL_GETDENTS64: usize = 61;
 const SYSCALL_READ: usize = 63;
 const SYSCALL_WRITE: usize = 64;
-const SYSCALL_FSSTAT: usize = 80;
+const SYSCALL_FSTAT: usize = 80;
 const SYSCALL_EXIT: usize = 93;
 const SYSCALL_NANOSLEEP: usize =101;
 const SYSCALL_SCHED_YIELD: usize = 124;
@@ -79,12 +79,12 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 		SYSCALL_OPENAT => sys_openat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2] as isize),
 		SYSCALL_CLOSE => sys_close(args[0] as isize),
 		SYSCALL_GETCWD => sys_getcwd(args[0] as *mut u8, args[1]),
-		SYS_GETDENTS64 => sys_getdents64(args[0] as usize, args[1] as *mut u8, args[2] as usize),
+		SYSCALL_GETDENTS64 => sys_getdents64(args[0] as usize, args[1] as *mut u8, args[2] as usize),
 		SYSCALL_DUP => sys_dup(args[0] as isize),
 		SYSCALL_DUP3 => sys_dup3(args[0] as isize, args[1] as isize, args[2] as isize),
 		SYSCALL_MKDIRAT => sys_mkdirat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2] as usize),
 		SYSCALL_CHDIR => sys_chdir(&translate_str(get_token(), args[0] as *mut u8)),
-		SYSCALL_FSSTAT => sys_fsstat(args[0] as isize, args[1] as *mut u8),
+		SYSCALL_FSTAT => sys_fstat(args[0] as isize, args[1] as *mut u8),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

@@ -507,9 +507,9 @@ pub fn sys_chdir(path: &str) -> isize {
     0
 }
 
-// SYSCALL_FSSTAT => sys_fsstat(args[0] as isize, args[1] as *mut u8),
+// SYSCALL_FSSTAT => sys_fstat(args[0] as isize, args[1] as *mut u8),
 
-pub fn sys_fsstat(fd: isize, buf: *mut u8) -> isize {
+pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
     println!("sys_fsstat: fd: {}, buf: {:?}", fd, buf);
     let fd = fd as usize;
     let task = myproc();
