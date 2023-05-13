@@ -280,7 +280,7 @@ pub struct Dirent {
     pub d_reclen: u16, // 当前dirent的长度
     pub d_type: u8,    // 文件类型
     // d_name: char[]; // 文件名, 该字段不包含在结构体中，因为它是一个不定长数组
-    pub d_name: String,
+    pub d_name: [u8; 256],
 }
 
 impl Dirent {
@@ -290,7 +290,7 @@ impl Dirent {
             d_off: 0,
             d_reclen: 0,
             d_type: 0,
-            d_name: ".".to_string(),
+            d_name: [0; 256],
         }
     }
 }

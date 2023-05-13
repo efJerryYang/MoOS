@@ -307,20 +307,13 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
     }
 }
 
-pub const SYS_GETDENTS64: usize = 61;
+// pub const SYS_GETDENTS64: usize = 61;
 
 pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
     let task = myproc();
     let fd_manager = task.fd_manager.lock();
 
-    // if fd >= fd_manager.len() {
-    //     return -1;
-    // }
-
     let file_descriptor = &fd_manager.fd_array[fd];
-    // if !file_descriptor.readable {
-    //     return -1;
-    // }
     unsafe {
         let ptr = buf.offset(core::mem::size_of::<Dirent>() as isize);
         let len = len - core::mem::size_of::<Dirent>();
@@ -329,28 +322,27 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
     }
 
     println!("openat: fd: {}, buf: {:?}, len: {}", fd, buf, len);
-    // println!(".");
     let open_file = file_descriptor.open_file.clone();
     let inode = open_file.inode.clone();
     let mut entries = match inode.lock().list() {
         Ok(entries) => entries,
-        Err(_) => return 4, // TODO: Incorrect should return -1
+        Err(_) => return 4,
     };
     entries.push(".".to_string());
     let mut bytes_written = 0;
     let mut buf_ptr = buf;
 
     for entry in entries {
-        let name_len = entry.len() + 1; // +1 for null terminator
+        let name_len = entry.len() + 1;
         let dirent_size = size_of::<Dirent>() + name_len;
 
         if bytes_written + dirent_size > len {
             break;
         }
         let ino = inode.lock().find(&entry).unwrap();
-        let dirent = Dirent {
+        let mut dirent = Dirent {
             d_ino: ino.lock().metadata().unwrap().inode as u64,
-            d_off: 0, // d_off is not used, set it to 0
+            d_off: 0,
             d_reclen: dirent_size as u16,
             d_type: match ino.lock().metadata().unwrap().type_ {
                 FileType::Dir => 0x4,
@@ -363,8 +355,9 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
                 FileType::Socket => 0xC,
                 FileType::Unknown => 0x0,
             },
-            d_name: ".".to_string(),
+            d_name: [0; 256],
         };
+        dirent.d_name[..entry.len()].copy_from_slice(".".as_bytes());
 
         unsafe {
             // Write dirent to buf
@@ -372,12 +365,9 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
             buf_ptr = buf_ptr.add(size_of::<Dirent>());
 
             // Write name to buf
-            core::ptr::copy_nonoverlapping(entry.as_ptr(), buf_ptr, entry.len());
-            buf_ptr = buf_ptr.add(entry.len());
-
-            // Write null terminator
-            buf_ptr.write(0);
-            buf_ptr = buf_ptr.add(1);
+            core::ptr::write_bytes(buf_ptr, 0, name_len);
+            core::ptr::copy(entry.as_ptr(), buf_ptr, entry.len());
+            buf_ptr = buf_ptr.add(name_len);
         }
 
         bytes_written += dirent_size;
@@ -571,15 +561,6 @@ pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
 
     let mut stat = Stat::new();
 
-    // println!("stat: {:?}", stat);
-
-    // let stat_size = size_of::<Stat>();
-    // println!("stat_size: {}", stat_size);
-    // unsafe {
-    //     core::ptr::copy_nonoverlapping(&stat as *const Stat as *const u8, buf_ptr, stat_size);
-    // }
-    // // println!("after unsafe copy");
-    // bytes_written += stat_size;
     let alignment = align_of::<Stat>();
     let align_offset = buf.align_offset(alignment);
     let aligned_buf_ptr = if align_offset == 0 {
@@ -590,16 +571,14 @@ pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
 
     let stat_size = size_of::<Stat>();
     unsafe {
-        core::ptr::copy_nonoverlapping(
-            &stat as *const Stat as *const u8,
-            aligned_buf_ptr,
-            stat_size,
-        );
+        // Using ptr::write instead of copy_nonoverlapping
+        core::ptr::write(aligned_buf_ptr as *mut Stat, stat);
     }
     bytes_written += stat_size;
     bytes_written as isize;
     return 0;
 }
+
 
 /*
 
