@@ -41,7 +41,7 @@ lazy_static! {
     };
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq,Debug)]
 pub enum ProcessState {
     READY,
     RUNNING,

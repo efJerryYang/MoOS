@@ -103,8 +103,8 @@ pub fn rust_main() -> !{
 	println!("");
 	trap::init();
 	mm::init();
-	unsafe {sie::set_stimer();}
-	set_next_trigger();
+	// unsafe {sie::set_stimer();}
+	// set_next_trigger();
 	unsafe{
 		load_user_file();
 	}

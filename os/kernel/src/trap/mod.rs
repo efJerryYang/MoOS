@@ -46,7 +46,7 @@ pub unsafe fn trap_handler() -> ! {
 	
 	let scause = scause::read(); // get trap cause
     let stval = stval::read(); // get extra value
-	// println!("USER TRAP: stval={:#x},pc={:#x}",stval,cx.sepc);
+	// println!("USER TRAP: stval={:#x}",stval);
 	task_list.exclusive_access()[mycpu().proc_idx].utime+=get_time_ms()-task_list.exclusive_access()[mycpu().proc_idx].otime;
 	task_list.exclusive_access()[mycpu().proc_idx].otime=get_time_ms();
 

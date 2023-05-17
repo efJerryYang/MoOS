@@ -44,7 +44,7 @@ signed main(){
 		}
 		int pid=fork();
 		if(pid==0){
-			execve(buf,argv,0);
+			execve(buf,0,0);
 		}else{
 			int status;
 			wait(&status);

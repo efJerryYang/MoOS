@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 37
+	.quad 38
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -39,6 +39,7 @@ _app_num:
 	.quad uname_start
 	.quad unlink_start
 	.quad pipe_start
+	.quad mmap_start
 	.quad munmap_start
 	.quad munmap_end
 
@@ -80,6 +81,7 @@ _app_names:
 	.string "uname"
 	.string "unlink"
 	.string "pipe"
+	.string "mmap"
 	.string "munmap"
 
 	.section .data
@@ -338,6 +340,13 @@ unlink_end:
 pipe_start:
 	.incbin "../testbin/pipe"
 pipe_end:
+
+	.global mmap_start
+	.global mmap_end
+	.align 3
+mmap_start:
+	.incbin "../testbin/mmap"
+mmap_end:
 
 	.global munmap_start
 	.global munmap_end

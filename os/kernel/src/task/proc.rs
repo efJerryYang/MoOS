@@ -103,14 +103,11 @@ pub unsafe fn schedule(){
 		let mut idx=0;
 		loop{
 			let mut pcb=&mut tasks[idx] ;
-			// if(pcb.state == ProcessState::ZOMBIE){
-			// 	tasks.remove(idx);
-			// 	println!("now clear task {}", idx);
-			// 	continue;
-			// }
+			// println!("idx:{},state:{:?}",idx,pcb.state);
 			if(pcb.state == ProcessState::READY){
 				pcb.state=ProcessState::RUNNING;
 				cpu.proc_idx=idx;
+				// println!("entering :{}",idx);
 				__switch(
 					&mut cpu.context as *mut ProcessContext,
 					&mut pcb.context as *mut ProcessContext

@@ -21,7 +21,7 @@ build:
 
 binary:build 
 	$(OBJCOPY)  $(ELF) --strip-all -O binary $(patsubst $(TARGET_DIR)/%, $(TARGET_DIR)/%.bin, $(ELF))
-asm:build
+asm:
 	$(OBJDUMP) -D $(ELF) > debug/os.asm
 
 run: userbin binary
