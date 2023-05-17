@@ -286,7 +286,7 @@ pub struct Dirent {
 impl Dirent {
     pub fn new() -> Self {
         Self {
-            d_ino: 0,
+            d_ino: 123,
             d_off: 0,
             d_reclen: 0,
             d_type: 0,
@@ -300,13 +300,15 @@ impl Dirent {
 pub struct Stat {
     pub st_dev: u64,
     pub st_ino: u64,
-    pub st_mode: u64,
+    pub st_mode: u32,
     pub st_nlink: u32,
     pub st_uid: u32,
     pub st_gid: u32,
     pub st_rdev: u64,
-    pub st_size: u64,
-    pub st_blksize: u64,
+    pub __pad: u64,
+    pub st_size: u32,
+    pub st_blksize: u32,
+    pub __pad2: u32,
     pub st_blocks: u64,
     pub st_atime_sec: u64,
     pub st_atime_nsec: u64,
@@ -314,6 +316,7 @@ pub struct Stat {
     pub st_mtime_nsec: u64,
     pub st_ctime_sec: u64,
     pub st_ctime_nsec: u64,
+    pub __unused: [u32;2],
 }
 
 impl Stat {
@@ -323,18 +326,21 @@ impl Stat {
             st_ino: 1,
             st_mode: 1,
             st_nlink: 1,
-            st_uid: 0,
-            st_gid: 0,
-            st_rdev: 0,
-            st_size: 0,
-            st_blksize: 0,
-            st_blocks: 0,
+            st_uid: 0x11223344,
+            st_gid: 0x55667788,
+            st_rdev: 0xaabbccdd11223344,
+            st_size: 0x2333,
+            st_blksize: 0x11111111,
+            st_blocks: 0x2222222222222222,
             st_atime_sec: Timespec::default().sec as u64,
             st_atime_nsec: Timespec::default().nsec as u64,
             st_mtime_sec: Timespec::default().sec as u64,
             st_mtime_nsec: Timespec::default().nsec as u64,
             st_ctime_sec: Timespec::default().sec as u64,
             st_ctime_nsec: Timespec::default().nsec as u64,
+			__pad:0,
+			__pad2:0,
+			__unused:[0,0],
         }
     }
 }

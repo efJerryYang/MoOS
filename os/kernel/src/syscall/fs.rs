@@ -124,6 +124,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
             inode.clone()
         }
         None => {
+			// println!("[debug]creating new file.");
             // create a new file in fs
             let new_inode = Arc::new(Mutex::new(RegFileINode {
                 // Initialize the new inode with the required fields
@@ -246,6 +247,10 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     }
 }
 
+pub fn sys_mount()-> isize{
+	0
+}
+
 pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
     // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
     let task = myproc();
@@ -278,7 +283,7 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
             // if !file_descriptor.readable {
             //     return -1;
             // }
-            println!("fs.rs:214 - sys_read: fd {}", fd);
+            println!("[read] fs.rs:214 - sys_read: fd {}", fd);
             let mut open_file = file_descriptor.open_file.clone();
             let inode = open_file.inode.clone();
             let mut read_bytes = 0;
@@ -321,14 +326,19 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
         *ptr.offset((len + 1) as isize) = "\0".as_bytes()[0];
     }
 
-    println!("openat: fd: {}, buf: {:?}, len: {}", fd, buf, len);
+    // println!("openat: fd: {}, buf: {:?}, len: {}", fd, buf, len);
     let open_file = file_descriptor.open_file.clone();
     let inode = open_file.inode.clone();
-    let mut entries = match inode.lock().list() {
+    let mut entries:Vec<String> = Vec::new();
+	entries = match inode.lock().list() {
         Ok(entries) => entries,
-        Err(_) => return 4,
+        Err(_) => {
+			entries.push(".".to_string());
+			// entries.push("..".to_string());
+			entries
+		},
     };
-    entries.push(".".to_string());
+    
     let mut bytes_written = 0;
     let mut buf_ptr = buf;
 
@@ -339,25 +349,29 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
         if bytes_written + dirent_size > len {
             break;
         }
-        let ino = inode.lock().find(&entry).unwrap();
-        let mut dirent = Dirent {
-            d_ino: ino.lock().metadata().unwrap().inode as u64,
-            d_off: 0,
-            d_reclen: dirent_size as u16,
-            d_type: match ino.lock().metadata().unwrap().type_ {
-                FileType::Dir => 0x4,
-                FileType::File => 0x8,
-                FileType::SymLink => 0xA,
+        // let ino = inode.lock().find(&entry).unwrap();
+        // let mut dirent = Dirent {
+            // d_ino: ino.lock().metadata().unwrap().inode as u64,
+			// d_ino: 1,
+            // d_off: 0,
+            // d_reclen: dirent_size as u16,
+            // d_type: match ino.lock().metadata().unwrap().type_ {
+            //     FileType::Dir => 0x4,
+            //     FileType::File => 0x8,
+            //     FileType::SymLink => 0xA,
 
-                FileType::BlockDevice => 0x6,
-                FileType::CharDevice => 0x2,
-                FileType::NamedPipe => 0x1,
-                FileType::Socket => 0xC,
-                FileType::Unknown => 0x0,
-            },
-            d_name: [0; 256],
-        };
-        dirent.d_name[..entry.len()].copy_from_slice(".".as_bytes());
+            //     FileType::BlockDevice => 0x6,
+            //     FileType::CharDevice => 0x2,
+            //     FileType::NamedPipe => 0x1,
+            //     FileType::Socket => 0xC,
+            //     FileType::Unknown => 0x0,
+            // },
+            // d_name: [0; 256],
+        // };
+		let mut dirent = Dirent::new();
+        dirent.d_name[..entry.len()].copy_from_slice(entry.as_bytes());
+		dirent.d_reclen = entry.len() as u16;
+		// println!("dirent: d_name {:?}", dirent.d_name);
 
         unsafe {
             // Write dirent to buf
@@ -372,7 +386,7 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
 
         bytes_written += dirent_size;
     }
-    println!("bytes_written: {}", bytes_written);
+    // println!("bytes_written: {}", bytes_written);
     bytes_written as isize
 }
 
@@ -539,7 +553,22 @@ pub fn sys_chdir(path: &str) -> isize {
 // SYSCALL_FSSTAT => sys_fstat(args[0] as isize, args[1] as *mut u8),
 
 pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
-    println!("openat: fd: {}, buf: {:?}", fd, buf);
+	// let stat = Stat::new();
+	// let x=buf as *mut Stat;
+	// unsafe {
+	// 	*x=stat;
+	// 	for i in 0..16{
+	// 		for j in 0..16{
+	// 			print!("{:02x} ",*buf.add(i*16+j));
+	// 		}
+	// 		println!("");
+	// 	}
+	// 	println!("\n");
+	// }
+
+	// return 0;
+
+    // println!("openat: fd: {}, buf: {:?}", fd, buf);
     let fd = fd as usize;
     let task = myproc();
     let mut fd_manager = task.fd_manager.lock();
