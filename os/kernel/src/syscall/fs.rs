@@ -124,7 +124,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
             inode.clone()
         }
         None => {
-			// println!("[debug]creating new file.");
+            // println!("[debug]creating new file.");
             // create a new file in fs
             let new_inode = Arc::new(Mutex::new(RegFileINode {
                 // Initialize the new inode with the required fields
@@ -247,14 +247,18 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     }
 }
 
-pub fn sys_mount()-> isize{
-	let nuclear=include_bytes!("../../../testbin/text.txt");
-	let inode = Arc::new(Mutex::new(
-		RegFileINode::new("/".to_string(),"text.txt".to_string(), OpenFlags::CREATE  ,true, true )
-	));
-	inode.lock().file=nuclear.to_vec();
-	global_dentry_cache.insert("/text.txt", inode);
-	0
+pub fn sys_mount() -> isize {
+    let nuclear = include_bytes!("../../../testbin/text.txt");
+    let inode = Arc::new(Mutex::new(RegFileINode::new(
+        "/".to_string(),
+        "text.txt".to_string(),
+        OpenFlags::CREATE,
+        true,
+        true,
+    )));
+    inode.lock().file = nuclear.to_vec();
+    global_dentry_cache.insert("/text.txt", inode);
+    0
 }
 
 pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
@@ -335,16 +339,16 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
     // println!("openat: fd: {}, buf: {:?}, len: {}", fd, buf, len);
     let open_file = file_descriptor.open_file.clone();
     let inode = open_file.inode.clone();
-    let mut entries:Vec<String> = Vec::new();
-	entries = match inode.lock().list() {
+    let mut entries: Vec<String> = Vec::new();
+    entries = match inode.lock().list() {
         Ok(entries) => entries,
         Err(_) => {
-			entries.push(".".to_string());
-			// entries.push("..".to_string());
-			entries
-		},
+            entries.push(".".to_string());
+            // entries.push("..".to_string());
+            entries
+        }
     };
-    
+
     let mut bytes_written = 0;
     let mut buf_ptr = buf;
 
@@ -357,27 +361,27 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
         }
         // let ino = inode.lock().find(&entry).unwrap();
         // let mut dirent = Dirent {
-            // d_ino: ino.lock().metadata().unwrap().inode as u64,
-			// d_ino: 1,
-            // d_off: 0,
-            // d_reclen: dirent_size as u16,
-            // d_type: match ino.lock().metadata().unwrap().type_ {
-            //     FileType::Dir => 0x4,
-            //     FileType::File => 0x8,
-            //     FileType::SymLink => 0xA,
+        // d_ino: ino.lock().metadata().unwrap().inode as u64,
+        // d_ino: 1,
+        // d_off: 0,
+        // d_reclen: dirent_size as u16,
+        // d_type: match ino.lock().metadata().unwrap().type_ {
+        //     FileType::Dir => 0x4,
+        //     FileType::File => 0x8,
+        //     FileType::SymLink => 0xA,
 
-            //     FileType::BlockDevice => 0x6,
-            //     FileType::CharDevice => 0x2,
-            //     FileType::NamedPipe => 0x1,
-            //     FileType::Socket => 0xC,
-            //     FileType::Unknown => 0x0,
-            // },
-            // d_name: [0; 256],
+        //     FileType::BlockDevice => 0x6,
+        //     FileType::CharDevice => 0x2,
+        //     FileType::NamedPipe => 0x1,
+        //     FileType::Socket => 0xC,
+        //     FileType::Unknown => 0x0,
+        // },
+        // d_name: [0; 256],
         // };
-		let mut dirent = Dirent::new();
+        let mut dirent = Dirent::new();
         dirent.d_name[..entry.len()].copy_from_slice(entry.as_bytes());
-		dirent.d_reclen = entry.len() as u16;
-		// println!("dirent: d_name {:?}", dirent.d_name);
+        dirent.d_reclen = entry.len() as u16;
+        // println!("dirent: d_name {:?}", dirent.d_name);
 
         unsafe {
             // Write dirent to buf
@@ -559,20 +563,20 @@ pub fn sys_chdir(path: &str) -> isize {
 // SYSCALL_FSSTAT => sys_fstat(args[0] as isize, args[1] as *mut u8),
 
 pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
-	// let stat = Stat::new();
-	// let x=buf as *mut Stat;
-	// unsafe {
-	// 	*x=stat;
-	// 	for i in 0..16{
-	// 		for j in 0..16{
-	// 			print!("{:02x} ",*buf.add(i*16+j));
-	// 		}
-	// 		println!("");
-	// 	}
-	// 	println!("\n");
-	// }
+    // let stat = Stat::new();
+    // let x=buf as *mut Stat;
+    // unsafe {
+    // 	*x=stat;
+    // 	for i in 0..16{
+    // 		for j in 0..16{
+    // 			print!("{:02x} ",*buf.add(i*16+j));
+    // 		}
+    // 		println!("");
+    // 	}
+    // 	println!("\n");
+    // }
 
-	// return 0;
+    // return 0;
 
     // println!("openat: fd: {}, buf: {:?}", fd, buf);
     let fd = fd as usize;
@@ -613,7 +617,6 @@ pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
     bytes_written as isize;
     return 0;
 }
-
 
 /*
 
@@ -691,6 +694,9 @@ pub fn sys_pipe2(pipe: *mut [usize; 2]) -> isize {
 
     pipe[0] = read_fd;
     pipe[1] = write_fd;
-
+    // test string as below
+    // println!("cpid: 0");
+    // println!("cpid: 1");
+    // println!("  Write to pipe successfully.");
     0
 }
