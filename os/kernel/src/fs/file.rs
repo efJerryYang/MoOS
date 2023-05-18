@@ -180,6 +180,9 @@ impl INode for RegFileINode {
     fn is_pipe(&self) -> bool {
         return false;
     }
+    fn write_to_pipe(&mut self, buf: &[u8]) -> Result<usize> {
+        return Ok(0);
+    }
 }
 
 pub struct TerminalINode {
@@ -277,6 +280,9 @@ impl INode for TerminalINode {
 
     fn is_pipe(&self) -> bool {
         return false;
+    }
+    fn write_to_pipe(&mut self, buf: &[u8]) -> Result<usize> {
+        return Ok(0);
     }
 }
 
@@ -447,5 +453,18 @@ impl INode for PipeINode {
     }
     fn is_pipe(&self) -> bool {
         return self.pipe;
+    }
+    fn write_to_pipe(&mut self, buf: &[u8]) -> Result<usize> {
+        if !self.writable {
+            return Err(FsError::InvalidParam);
+        }
+
+        let mut len = 0;
+        for b in buf {
+            self.file.lock().push(*b);
+            len += 1;
+        }
+
+        Ok(len)
     }
 }

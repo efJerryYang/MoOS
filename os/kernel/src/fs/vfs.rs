@@ -130,6 +130,8 @@ pub trait INode: Any + Sync + Send {
     fn file_name(&self) -> String;
 
     fn is_pipe(&self) -> bool;
+
+    fn write_to_pipe(&mut self, buf: &[u8]) -> Result<usize>;
     
 }
 

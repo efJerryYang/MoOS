@@ -183,7 +183,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let task = myproc();
     let fd_manager = task.fd_manager.lock();
 
-    let is_pipe = &fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
+    let is_pipe = fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
 
     match fd {
         FD_STDOUT => {
@@ -214,7 +214,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
             if !file_descriptor.writable {
                 // println!("sys_write: fd: {} not writable", other);
                 return -1;
-            // }
+            }
             // if is stdout
             if !file_descriptor.readable {
                 // println!("redirect to stdout");
@@ -225,6 +225,14 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
                     buf,
                     len,
                 );
+                if is_pipe {
+                    let mut pipe = &mut file_descriptor.open_file.inode.lock();
+                    for buffer in buffers {
+                        pipe.write_to_pipe(buffer);
+                    }
+                    return len as isize;
+                
+                }
                 for buffer in buffers {
                     let str = core::str::from_utf8(buffer).unwrap();
                     print!("{}", str);
