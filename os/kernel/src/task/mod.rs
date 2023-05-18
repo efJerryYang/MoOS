@@ -208,7 +208,7 @@ impl FdManager {
     pub fn remove(&mut self, fd: usize) -> FileDescriptor {
         self.fd_array.remove(fd)
     }
-    pub fn alloc_fd(&mut self) -> usize {
+    pub fn alloc_fd(&mut self, readable: bool, writable: bool) -> usize {
         let mut i = 0;
         // while i < self.fd_array.len() {
         //     if self.fd_array[i].open_file.inode.lock().get_type() == INodeType::NULL {
@@ -218,8 +218,8 @@ impl FdManager {
         // }
         self.fd_array.push(FileDescriptor {
             open_file: Arc::new(OpenFile::new()),
-            readable: false,
-            writable: false,
+            readable,
+            writable,
         });
         self.fd_array.len() - 1
     }

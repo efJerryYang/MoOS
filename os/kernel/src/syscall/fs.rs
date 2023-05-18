@@ -212,9 +212,9 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
             }
             let file_descriptor = &fd_manager.fd_array[other];
             if !file_descriptor.writable {
-                // println!("sys_write: fd: {} not writable", fd);
+                // println!("sys_write: fd: {} not writable", other);
                 return -1;
-            }
+            // }
             // if is stdout
             if !file_descriptor.readable {
                 // println!("redirect to stdout");
@@ -711,8 +711,8 @@ pub fn sys_pipe2(pipe: *mut [usize; 2]) -> isize {
 
     let mut pipe = unsafe { &mut *pipe };
 
-    let read_fd = fd_manager.alloc_fd();
-    let write_fd = fd_manager.alloc_fd();
+    let read_fd = fd_manager.alloc_fd(true, false);
+    let write_fd = fd_manager.alloc_fd(false, true);
 
     let buf = Arc::new(Mutex::new(Vec::<u8>::new()));
 
