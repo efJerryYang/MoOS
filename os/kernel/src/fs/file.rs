@@ -177,6 +177,9 @@ impl INode for RegFileINode {
     fn file_name(&self) -> String {
         return self.name.clone();
     }
+    fn is_pipe(&self) -> bool {
+        return false;
+    }
 }
 
 pub struct TerminalINode {
@@ -270,6 +273,10 @@ impl INode for TerminalINode {
     }
     fn file_name(&self) -> String {
         return "null".to_string();
+    }
+
+    fn is_pipe(&self) -> bool {
+        return false;
     }
 }
 
@@ -437,5 +444,8 @@ impl INode for PipeINode {
     }
     fn file_name(&self) -> String {
         return "null".to_string();
+    }
+    fn is_pipe(&self) -> bool {
+        return self.pipe;
     }
 }

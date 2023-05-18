@@ -128,6 +128,8 @@ pub trait INode: Any + Sync + Send {
     fn file_data(&mut self) -> &mut Vec<u8>;
 
     fn file_name(&self) -> String;
+
+    fn is_pipe(&self) -> bool;
     
 }
 

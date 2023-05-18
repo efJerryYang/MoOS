@@ -19,8 +19,8 @@ use crate::{
     mm::translated_byte_buffer,
     sbi::console_getchar,
     task::{
-        cpu::mycpu, global_dentry_cache, global_open_file_table, myproc, task_list, FdManager,
-        FileDescriptor, OpenFile, global_buffer_list,
+        cpu::mycpu, global_buffer_list, global_dentry_cache, global_open_file_table, myproc,
+        task_list, FdManager, FileDescriptor, OpenFile,
     },
 };
 const FD_STDOUT: usize = 1;
@@ -183,6 +183,8 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let task = myproc();
     let fd_manager = task.fd_manager.lock();
 
+    let is_pipe = &fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
+
     match fd {
         FD_STDOUT => {
             let buffers = translated_byte_buffer(
@@ -265,6 +267,7 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
     // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
     let task = myproc();
     let fd_manager = task.fd_manager.lock();
+    let is_pipe = fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
 
     match fd {
         FD_STDIN => {
@@ -295,6 +298,28 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
             // }
             // println!("[read] fs.rs:214 - sys_read: fd {}", fd);
             let mut open_file = file_descriptor.open_file.clone();
+            if is_pipe {
+                let mut buffers = translated_byte_buffer(
+                    task_list.exclusive_access()[mycpu().proc_idx]
+                        .memory_set
+                        .token(),
+                    buf,
+                    len,
+                );
+                let data_len = open_file.inode.lock().file_data().len();
+                for i in 0..data_len {
+                    let byte = open_file.inode.lock().file_data().clone()[i];
+                    buffers[i][0] = byte;
+                }
+                // for buffer in buffers {
+                //     for byte in buffer {
+                //         *byte = open_file.inode.lock().file_data().clone()[open_file.offset];
+                //     }
+                // }
+                // println!("fs.rs:214 - sys_read: fd {}", fd);
+                return data_len as isize;
+
+            }
             let inode = open_file.inode.clone();
             let mut read_bytes = 0;
             let mut buf_iter = 0;
