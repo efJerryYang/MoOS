@@ -349,42 +349,35 @@ pub struct PipeINode {
     pub readable: bool,
     pub writable: bool,
     
-    pub pipe:bool,
+    pub pipe: bool,
     pub read_pos: usize,
     pub write_pos: usize,
-    pub file: Vec<u8>,
+    pub file: Arc<Mutex<Vec<u8>>>,
+    pub tmp: Vec<u8>,
 }
 
 impl PipeINode {
-    pub fn new() -> Self {
-        Self {
-            readable: true,
-            writable: true,
-            pipe: true,
-            read_pos: 0,
-            write_pos: 0,
-            file: Vec::new(),
-        }
-    }
-    pub fn new_pipe_read() -> Self {
+    pub fn new_pipe_read(buf: Arc<Mutex<Vec<u8>>>) -> Self {
         Self {
             readable: true,
             writable: false,
             pipe: true,
             read_pos: 0,
             write_pos: 0,
-            file: Vec::new(),
+            file: buf,
+            tmp: Vec::<u8>::new(),
         }
     }
 
-    pub fn new_pipe_write() -> Self {
+    pub fn new_pipe_write(buf: Arc<Mutex<Vec<u8>>>) -> Self {
         Self {
             readable: false,
             writable: true,
             pipe: true,
             read_pos: 0,
             write_pos: 0,
-            file: Vec::new(),
+            file: buf,
+            tmp: Vec::<u8>::new(),
         }
     }
 }
@@ -395,14 +388,14 @@ impl INode for PipeINode {
             return Err(FsError::InvalidParam);
         }
 
-        let len = self.file.len();
+        let len = self.file.lock().len();
         if len == 0 {
             return Err(FsError::Again);
         }
 
         let mut i = 0;
         for b in buf {
-            *b = self.file[i];
+            *b = self.file.lock()[i];
             i += 1;
         }
 
@@ -438,7 +431,9 @@ impl INode for PipeINode {
     }
 
     fn file_data(&mut self) -> &mut Vec<u8> {
-        return &mut self.file;
+        let tmp = self.file.lock().clone();
+        self.tmp = tmp;
+        return &mut self.tmp;
     }
     fn file_name(&self) -> String {
         return "null".to_string();

@@ -20,7 +20,7 @@ use crate::{
     sbi::console_getchar,
     task::{
         cpu::mycpu, global_dentry_cache, global_open_file_table, myproc, task_list, FdManager,
-        FileDescriptor, OpenFile,
+        FileDescriptor, OpenFile, global_buffer_list,
     },
 };
 const FD_STDOUT: usize = 1;
@@ -689,11 +689,16 @@ pub fn sys_pipe2(pipe: *mut [usize; 2]) -> isize {
     let read_fd = fd_manager.alloc_fd();
     let write_fd = fd_manager.alloc_fd();
 
-    fd_manager.fd_array[read_fd].open_file = Arc::new(OpenFile::new_pipe_read());
-    fd_manager.fd_array[write_fd].open_file = Arc::new(OpenFile::new_pipe_write());
+    let buf = Arc::new(Mutex::new(Vec::<u8>::new()));
+
+    fd_manager.fd_array[read_fd].open_file = Arc::new(OpenFile::new_pipe_read(Arc::clone(&buf)));
+    fd_manager.fd_array[write_fd].open_file = Arc::new(OpenFile::new_pipe_write(Arc::clone(&buf)));
+
+    global_buffer_list.insert(buf);
 
     pipe[0] = read_fd;
     pipe[1] = write_fd;
+    println!("pipe2: read_fd: {}, write_fd: {}", read_fd, write_fd);
     // test string as below
     // println!("cpid: 0");
     // println!("cpid: 1");

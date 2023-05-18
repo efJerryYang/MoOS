@@ -1,7 +1,7 @@
 use crate::{
     fs::{
-        file::{OpenFlags, RegFileINode, TerminalINode, PipeINode},
-        vfs::{INode, Metadata, Timespec, FileType},
+        file::{OpenFlags, PipeINode, RegFileINode, TerminalINode},
+        vfs::{FileType, INode, Metadata, Timespec},
     },
     mm::{PhysAddr, VirtAddr},
 };
@@ -39,9 +39,12 @@ lazy_static! {
     pub static ref global_open_file_table: GlobalOpenFileTable = GlobalOpenFileTable {
         table: Arc::new(Mutex::new(Vec::new())),
     };
+    pub static ref global_buffer_list: GlobalBufferList = GlobalBufferList {
+        list: Arc::new(Mutex::new(Vec::new())),
+    };
 }
 
-#[derive(Copy, Clone, PartialEq,Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum ProcessState {
     READY,
     RUNNING,
@@ -95,19 +98,19 @@ impl OpenFile {
         }
     }
 
-    pub fn new_pipe_read() -> Self {
+    pub fn new_pipe_read(buf: Arc<Mutex<Vec<u8>>>) -> Self {
         Self {
             offset: 0,
             status_flags: 0,
-            inode: Arc::new(Mutex::new(PipeINode::new_pipe_read())),
+            inode: Arc::new(Mutex::new(PipeINode::new_pipe_read(buf))),
         }
     }
 
-    pub fn new_pipe_write() -> Self {
+    pub fn new_pipe_write(buf: Arc<Mutex<Vec<u8>>>) -> Self {
         Self {
             offset: 0,
             status_flags: 0,
-            inode: Arc::new(Mutex::new(PipeINode::new_pipe_write())),
+            inode: Arc::new(Mutex::new(PipeINode::new_pipe_write(buf))),
         }
     }
 }
@@ -120,6 +123,30 @@ impl GlobalOpenFileTable {
         let mut table = self.table.lock();
         table.push((*open_file).clone());
         Arc::new(table.last().unwrap().clone())
+    }
+}
+
+#[derive(Debug)]
+pub struct GlobalBufferList {
+    list: Arc<Mutex<Vec<Arc<Mutex<Vec<u8>>>>>>,
+}
+
+impl GlobalBufferList {
+    pub fn insert(&self, buf: Arc<Mutex<Vec<u8>>>) -> Arc<Mutex<Vec<u8>>> {
+        let mut list = self.list.lock();
+        list.push(buf);
+        list.last().unwrap().clone()
+    }
+    pub fn remove(&self, buf: Arc<Mutex<Vec<u8>>>) {
+        let mut list = self.list.lock();
+        let mut i = 0;
+        for b in list.iter() {
+            if Arc::ptr_eq(b, &buf) {
+                list.remove(i);
+                break;
+            }
+            i += 1;
+        }
     }
 }
 #[derive(Clone)]
