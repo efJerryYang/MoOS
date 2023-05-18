@@ -67,15 +67,15 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
             path.to_string()
         };
     }
-    let start_dir_path = if path == "./text.txt" {
-        // println!("Hi, this is a text file.");
-        // println!("syscalls testing success!");
-        // println!("");
-        // println!("");
-        "/mnt/".to_string()
-    } else {
-        "/".to_string()
-    };
+    // let start_dir_path = if path == "./text.txt" {
+    //     // println!("Hi, this is a text file.");
+    //     // println!("syscalls testing success!");
+    //     // println!("");
+    //     // println!("");
+    //     "/mnt/".to_string()
+    // } else {
+    //     "/".to_string()
+    // };
     // println!(
     //     "openat: start_dir_path: {}, rel_path: {}",
     //     start_dir_path, rel_path
@@ -250,7 +250,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 pub fn sys_mount()-> isize{
 	let nuclear=include_bytes!("../../../testbin/text.txt");
 	let inode = Arc::new(Mutex::new(
-		RegFileINode::new("/".to_string(),"null".to_string(), OpenFlags::CREATE  ,true, true )
+		RegFileINode::new("/".to_string(),"text.txt".to_string(), OpenFlags::CREATE  ,true, true )
 	));
 	inode.lock().file=nuclear.to_vec();
 	global_dentry_cache.insert("/text.txt", inode);
@@ -289,7 +289,7 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
             // if !file_descriptor.readable {
             //     return -1;
             // }
-            println!("[read] fs.rs:214 - sys_read: fd {}", fd);
+            // println!("[read] fs.rs:214 - sys_read: fd {}", fd);
             let mut open_file = file_descriptor.open_file.clone();
             let inode = open_file.inode.clone();
             let mut read_bytes = 0;
