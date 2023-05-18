@@ -67,7 +67,7 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
         SYSCALL_EXIT => sys_exit(args[0] as i32),
 		SYSCALL_NANOSLEEP => sys_nanosleep(translate(args[0]) as *mut timespec,translate(args[1]) as *mut timespec),
-		SYSCALL_READ => sys_read(args[0], args[1] as *mut u8, args[2]),
+		SYSCALL_READ => sys_read(args[0] as isize, args[1] as *mut u8, args[2]),
 		SYSCALL_SCHED_YIELD=> sys_yield(),
 		SYSCALL_GETTIMEOFDAY=> sys_gettimeofday(args[0] as *mut usize),
 		SYSCALL_GETPID => sys_getpid(),
@@ -92,7 +92,9 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
 		SYSCALL_UNAME => sys_uname(translate(args[0]) as *mut u8),
 		SYSCALL_MUNMAP => sys_munmap(args[0] as *mut usize, args[1] as usize),
 		SYSCALL_MMAP => sys_mmap(args[0] as *mut usize, args[1] as usize, args[2] as i32, args[3] as i32, args[4] as i32, args[5] as usize),
-		SYSCALL_PIPE2 => sys_pipe2(translate(args[0]) as *mut [usize;2]),
+		SYSCALL_PIPE2 => {
+			println!("pipe2: arg0: {:p}", args[0] as *mut u8);
+			sys_pipe2(translate(args[0]) as *mut u8)},
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

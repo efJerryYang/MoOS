@@ -1,6 +1,9 @@
 //! File and filesystem-related syscalls
 
-use core::mem::{align_of, size_of};
+use core::{
+    mem::{align_of, size_of},
+    ops::Add,
+};
 
 use alloc::{
     format,
@@ -183,8 +186,6 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let task = myproc();
     let fd_manager = task.fd_manager.lock();
 
-    let is_pipe = fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
-
     match fd {
         FD_STDOUT => {
             let buffers = translated_byte_buffer(
@@ -225,13 +226,13 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
                     buf,
                     len,
                 );
+                let is_pipe = fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
                 if is_pipe {
                     let mut pipe = &mut file_descriptor.open_file.inode.lock();
                     for buffer in buffers {
                         pipe.write_to_pipe(buffer);
                     }
                     return len as isize;
-                
                 }
                 for buffer in buffers {
                     let str = core::str::from_utf8(buffer).unwrap();
@@ -271,11 +272,13 @@ pub fn sys_mount() -> isize {
     0
 }
 
-pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
+pub fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
     // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
     let task = myproc();
     let fd_manager = task.fd_manager.lock();
-    let is_pipe = fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
+    // println!("fd_manager.len() = {}", fd_manager.len());
+    // println!("fd: {}", fd);
+    let fd = fd as usize;
 
     match fd {
         FD_STDIN => {
@@ -292,7 +295,7 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
         other => {
             // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
             if other >= fd_manager.len() {
-                return -1;
+                return 0;
             }
             let file_descriptor = &fd_manager.fd_array[other];
             // println!(
@@ -305,6 +308,8 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
             //     return -1;
             // }
             // println!("[read] fs.rs:214 - sys_read: fd {}", fd);
+            let is_pipe = fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
+
             let mut open_file = file_descriptor.open_file.clone();
             if is_pipe {
                 let mut buffers = translated_byte_buffer(
@@ -326,7 +331,6 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
                 // }
                 // println!("fs.rs:214 - sys_read: fd {}", fd);
                 return data_len as isize;
-
             }
             let inode = open_file.inode.clone();
             let mut read_bytes = 0;
@@ -713,11 +717,9 @@ pub fn sys_unlinkat(fd: isize, path: &str, flags: usize) -> isize {
 
 // SYSCALL_PIPE2 => sys_pipe2(translate(args[0]) as *mut usize),
 
-pub fn sys_pipe2(pipe: *mut [usize; 2]) -> isize {
+pub fn sys_pipe2(pipe: *mut u8) -> isize {
     let task = myproc();
     let mut fd_manager = task.fd_manager.lock();
-
-    let mut pipe = unsafe { &mut *pipe };
 
     let read_fd = fd_manager.alloc_fd(true, false);
     let write_fd = fd_manager.alloc_fd(false, true);
@@ -729,9 +731,19 @@ pub fn sys_pipe2(pipe: *mut [usize; 2]) -> isize {
 
     global_buffer_list.insert(buf);
 
-    pipe[0] = read_fd;
-    pipe[1] = write_fd;
+    // pipe[0] = read_fd;
+    // pipe[1] = write_fd;
+    unsafe {
+        // core::ptr::write(pipe as *mut isize, read_fd as isize);
+        *(pipe as *mut isize) = 999 as isize;
+        // println!("pipe2: pipe: {:p}", pipe as *mut isize);
+        // print out the value in the address
+        // core::ptr::write((pipe as *mut isize).offset(1), write_fd as isize);
+        *(pipe as *mut isize).add(1) = 777 as isize;
+        // println!("pipe2: pipe: {:p}", (pipe as *mut isize).offset(1));
+    }
     println!("pipe2: read_fd: {}, write_fd: {}", read_fd, write_fd);
+    
     // test string as below
     // println!("cpid: 0");
     // println!("cpid: 1");
