@@ -717,7 +717,7 @@ pub fn sys_unlinkat(fd: isize, path: &str, flags: usize) -> isize {
 
 // SYSCALL_PIPE2 => sys_pipe2(translate(args[0]) as *mut usize),
 
-pub fn sys_pipe2(pipe: *mut u8) -> isize {
+pub fn sys_pipe2(pipe: *mut u32) -> isize {
     let task = myproc();
     let mut fd_manager = task.fd_manager.lock();
 
@@ -735,15 +735,15 @@ pub fn sys_pipe2(pipe: *mut u8) -> isize {
     // pipe[1] = write_fd;
     unsafe {
         // core::ptr::write(pipe as *mut isize, read_fd as isize);
-        *(pipe as *mut isize) = 999 as isize;
+        *pipe = read_fd as u32;
         // println!("pipe2: pipe: {:p}", pipe as *mut isize);
         // print out the value in the address
         // core::ptr::write((pipe as *mut isize).offset(1), write_fd as isize);
-        *(pipe as *mut isize).add(1) = 777 as isize;
+        *pipe.add(1) = write_fd as u32;
         // println!("pipe2: pipe: {:p}", (pipe as *mut isize).offset(1));
     }
     println!("pipe2: read_fd: {}, write_fd: {}", read_fd, write_fd);
-    
+
     // test string as below
     // println!("cpid: 0");
     // println!("cpid: 1");
