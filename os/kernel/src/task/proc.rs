@@ -13,7 +13,7 @@ pub unsafe fn clone(stack:usize)->usize{
 	let nowpid=mycpu().proc_idx;
 	tasks[pid].parent=nowpid;
 	tasks[pid].fd_manager=tasks[nowpid].fd_manager.clone();
-	println!("tasks[pid].fd_manager.len(): {}",tasks[pid].fd_manager.len());
+	// println!("tasks[pid].fd_manager.len(): {}",tasks[pid].fd_manager.len());
 	tasks[pid].memory_set=MemorySet::from_existed_user(&tasks[nowpid].memory_set);
 	tasks[pid].heap_pos = VirtAddr::from(tasks[pid].memory_set.get_areas_end());
 	tasks[pid].heap_pos.0 += PAGE_SIZE;

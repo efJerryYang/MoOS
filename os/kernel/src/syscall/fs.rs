@@ -203,7 +203,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
             len as isize
         }
         other => {
-            println!("sys_write: fd: {}, buf: {:?}, len: {}", fd, buf, len);
+            // println!("sys_write: fd: {}, buf: {:?}, len: {}", fd, buf, len);
             if other >= fd_manager.len() {
                 println!(
                     "sys_write: fd: {} not exist (max: {})",
@@ -214,11 +214,11 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
             }
             let file_descriptor = &fd_manager.fd_array[other];
             if !file_descriptor.writable {
-                println!("sys_write: fd: {} not writable", other);
+                // println!("sys_write: fd: {} not writable", other);
                 return -1;
             }
             // if is stdout
-            println!("sys_write: fd: {} is stdout", other);
+            // println!("sys_write: fd: {} is stdout", other);
             if !file_descriptor.readable {
                 // println!("redirect to stdout");
                 let buffers = translated_byte_buffer(
@@ -234,6 +234,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
                     for buffer in buffers {
                         print!("write to pipe: {:?}\n", buffer);
                         pipe.write_to_pipe(buffer);
+                        pipe.set_pipe_write_pos(len);
                     }
                     return len as isize;
                 }
@@ -322,15 +323,18 @@ pub unsafe fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
                     buf,
                     len,
                 );
-                println!("read from pipe");
+                // println!("read from pipe");
                 // let data_len = open_file.inode.lock().file_data().len();
+                // print the content of pipe buf
+                let buf = open_file.inode.lock().file_data().clone();
+                // println!("buf: {:?}", buf);
                 for i in 0..len {
                     let file_data = open_file.inode.lock().file_data().clone();
-                    let offset = open_file.offset;
-                    let byte = file_data.get(i);
+                    let pos = open_file.inode.lock().get_pipe_read_pos();
+                    let byte = file_data.get(1 + pos);
                     let byte = match byte {
                         Some(byte) => {
-                            println!("sys_read: pipe is not empty");
+                            // println!("sys_read: pipe is not empty");
                             *byte
                         }
                         None => {
@@ -340,6 +344,8 @@ pub unsafe fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
                         }
                     };
                     buffers[i][0] = byte;
+                    open_file.inode.lock().set_pipe_read_pos(pos + 1)
+
                     // println!("byte: {}", byte);
                 }
                 // for buffer in buffers {
@@ -747,7 +753,7 @@ pub fn sys_pipe2(pipe: *mut u32) -> isize {
     fd_manager.fd_array[read_fd].open_file = Arc::new(OpenFile::new_pipe_read(Arc::clone(&buf)));
     fd_manager.fd_array[write_fd].open_file = Arc::new(OpenFile::new_pipe_write(Arc::clone(&buf)));
 
-    println!("fd_manager.len(): {}", fd_manager.len());
+    // println!("fd_manager.len(): {}", fd_manager.len());
     global_buffer_list.insert(buf);
 
     // pipe[0] = read_fd;
