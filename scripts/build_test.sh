@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd testsuits-for-oskernel/riscv-syscalls-testing/user/
+cd ../testsuits-for-oskernel/riscv-syscalls-testing/user/
 
 rm -rf build/
 rm -rf asm/ bin/ libulib.a

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd ..
+
 rm -f os_serial_out.txt makefile_stdout_stderr.txt
 
 touch os_serial_out.txt
