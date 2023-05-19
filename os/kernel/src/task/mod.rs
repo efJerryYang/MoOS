@@ -252,7 +252,7 @@ impl GlobalDentryCache {
         table.remove(path);
     }
     pub fn unlink(&self, path: &str) {
-        let mut table = self.table.lock();
+        let table = self.table.lock();
         let mut v = table.get(path).unwrap().lock();
         // let metadata = Metadata {
         //     mode: 0,

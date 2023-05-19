@@ -87,13 +87,11 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
 		SYSCALL_DUP3 => sys_dup3(args[0] as isize, args[1] as isize, args[2] as isize),
 		SYSCALL_MKDIRAT => sys_mkdirat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2] as usize),
 		SYSCALL_CHDIR => sys_chdir(&translate_str(get_token(), args[0] as *mut u8)),
-		SYSCALL_FSTAT => {
-			println!("fstat rust buf: {:#x}", args[1]);
-			;sys_fstat(args[0] as isize, args[1] as *mut u8)},
+		SYSCALL_FSTAT => sys_fstat(args[0] as isize, args[1] as *mut u8),
 		SYSCALL_UNLINKAT => sys_unlinkat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2]as usize),
 		SYSCALL_UNAME => sys_uname(translate(args[0]) as *mut u8),
 		SYSCALL_MUNMAP => sys_munmap(args[0] as *mut usize, args[1] as usize),
-		SYSCALL_MMAP => sys_mmap(args[0] as usize, args[1] as usize, args[2] as i32, args[3] as i32, args[4] as i32, args[5] as usize),
+		SYSCALL_MMAP => sys_mmap(args[0] as usize, args[1] as u32 as usize, args[2] as i32, args[3] as i32, args[4] as usize, args[5] as usize),
 		SYSCALL_PIPE2 => {
 			// println!("pipe2: arg0: {:p}", args[0] as *mut u32);
 			sys_pipe2(translate(args[0]) as *mut u32)},

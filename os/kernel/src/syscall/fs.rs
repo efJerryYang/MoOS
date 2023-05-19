@@ -650,7 +650,6 @@ pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
         return -1;
     }
     let mut stat = Stat::new();
-	println!("[je]{}",size_of::<Stat>());
 
 	stat.st_size=fd_manager.fd_array[fd].open_file.inode.lock().file_size() as u32;
 	// println!("file_data:{:?}",fd_manager.fd_array[fd].open_file.inode.lock().file_data());
