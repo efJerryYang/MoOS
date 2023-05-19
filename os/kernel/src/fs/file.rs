@@ -463,7 +463,8 @@ impl INode for PipeINode {
     }
 
     fn file_size(&self) -> usize {
-        return 0;
+        let file = self.file.lock();
+        return file.len();
     }
 
     fn file_data(&mut self) -> &mut Vec<u8> {
@@ -487,6 +488,7 @@ impl INode for PipeINode {
             self.file.lock().push(*b);
             len += 1;
         }
+        self.set_pipe_write_pos(self.file_size());
 
         Ok(len)
     }

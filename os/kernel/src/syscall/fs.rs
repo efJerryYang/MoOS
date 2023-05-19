@@ -205,11 +205,11 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
         other => {
             // println!("sys_write: fd: {}, buf: {:?}, len: {}", fd, buf, len);
             if other >= fd_manager.len() {
-                println!(
-                    "sys_write: fd: {} not exist (max: {})",
-                    fd,
-                    fd_manager.len()
-                );
+                // println!(
+                //     "sys_write: fd: {} not exist (max: {})",
+                //     fd,
+                //     fd_manager.len()
+                // );
                 return -1;
             }
             let file_descriptor = &fd_manager.fd_array[other];
@@ -232,17 +232,19 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
                 if is_pipe {
                     let mut pipe = &mut file_descriptor.open_file.inode.lock();
                     for buffer in buffers {
-                        print!("write to pipe: {:?}\n", buffer);
+                        // print!("write to pipe: {:?}\n", buffer);
                         pipe.write_to_pipe(buffer);
-                        pipe.set_pipe_write_pos(len);
                     }
+                    let null_buffer: &[u8] = &[0];
+                    pipe.write_to_pipe(null_buffer);
+                    pipe.set_pipe_write_pos(len);
                     return len as isize;
                 }
-                // for buffer in buffers {
-                //     let str = core::str::from_utf8(buffer).unwrap();
-                //     print!("{}", str);
-                // }
-                // return len as isize;
+                for buffer in buffers {
+                    let str = core::str::from_utf8(buffer).unwrap();
+                    print!("{}", str);
+                }
+                return len as isize;
             }
 
             let mut open_file = file_descriptor.open_file.clone();
@@ -329,9 +331,15 @@ pub unsafe fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
                 let buf = open_file.inode.lock().file_data().clone();
                 // println!("buf: {:?}", buf);
                 for i in 0..len {
-                    let file_data = open_file.inode.lock().file_data().clone();
-                    let pos = open_file.inode.lock().get_pipe_read_pos();
-                    let byte = file_data.get(1 + pos);
+                    let mut file_data = open_file.inode.lock().file_data().clone();
+                    let mut pos = open_file.inode.lock().get_pipe_read_pos();
+                    let mut byte = file_data.get(pos);
+                    while byte.is_none() {
+                        sys_yield();
+                        file_data = open_file.inode.lock().file_data().clone();
+                        pos = open_file.inode.lock().get_pipe_read_pos();
+                        byte = file_data.get(1 + pos);
+                    }
                     let byte = match byte {
                         Some(byte) => {
                             // println!("sys_read: pipe is not empty");
@@ -339,12 +347,14 @@ pub unsafe fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
                         }
                         None => {
                             // println!("sys_read: pipe is empty");
-                            sys_yield();
                             0
                         }
                     };
                     buffers[i][0] = byte;
-                    open_file.inode.lock().set_pipe_read_pos(pos + 1)
+                    open_file.inode.lock().set_pipe_read_pos(pos + 1);
+                    if byte == 0 {
+                        return i as isize;
+                    }
 
                     // println!("byte: {}", byte);
                 }
@@ -508,8 +518,9 @@ pub fn sys_dup3(fd: isize, new_fd: isize, flags: isize) -> isize {
     let flags = flags as usize;
     let task = myproc();
     let mut fd_manager = &mut task.fd_manager;
-
+    // println!("dup3: fd: {}, new_fd: {}, flags: {}", fd, new_fd, flags);
     if fd >= fd_manager.len() {
+        // println!("dup3: fd >= fd_manager.len(), fd: {}, fd_manager.len(): {}", fd, fd_manager.len());
         return -1;
     }
 
@@ -519,6 +530,7 @@ pub fn sys_dup3(fd: isize, new_fd: isize, flags: isize) -> isize {
     //     file_descriptor.readable, file_descriptor.writable
     // );
     if !file_descriptor.readable && !file_descriptor.writable {
+        // println!("dup3: !file_descriptor.readable && !file_descriptor.writable");
         return -1;
     }
 
