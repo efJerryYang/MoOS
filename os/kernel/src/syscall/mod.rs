@@ -93,7 +93,7 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
 		SYSCALL_MUNMAP => sys_munmap(args[0] as *mut usize, args[1] as usize),
 		SYSCALL_MMAP => sys_mmap(args[0] as *mut usize, args[1] as usize, args[2] as i32, args[3] as i32, args[4] as i32, args[5] as usize),
 		SYSCALL_PIPE2 => {
-			println!("pipe2: arg0: {:p}", args[0] as *mut u32);
+			// println!("pipe2: arg0: {:p}", args[0] as *mut u32);
 			sys_pipe2(translate(args[0]) as *mut u32)},
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }

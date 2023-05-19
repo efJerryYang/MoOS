@@ -202,7 +202,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
             len as isize
         }
         other => {
-            // println!("sys_write: fd: {}, buf: {:?}, len: {}", fd, buf, len);
+            println!("sys_write: fd: {}, buf: {:?}, len: {}", fd, buf, len);
             if other >= fd_manager.len() {
                 // println!(
                 //     "sys_write: fd: {} not exist (max: {})",
@@ -230,15 +230,16 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
                 if is_pipe {
                     let mut pipe = &mut file_descriptor.open_file.inode.lock();
                     for buffer in buffers {
+                        print!("write to pipe: {:?}\n", buffer);
                         pipe.write_to_pipe(buffer);
                     }
                     return len as isize;
                 }
-                for buffer in buffers {
-                    let str = core::str::from_utf8(buffer).unwrap();
-                    print!("{}", str);
-                }
-                return len as isize;
+                // for buffer in buffers {
+                //     let str = core::str::from_utf8(buffer).unwrap();
+                //     print!("{}", str);
+                // }
+                // return len as isize;
             }
 
             let mut open_file = file_descriptor.open_file.clone();
@@ -293,7 +294,7 @@ pub fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
             return 0;
         }
         other => {
-            // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
+            println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
             if other >= fd_manager.len() {
                 return 0;
             }
@@ -319,10 +320,17 @@ pub fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
                     buf,
                     len,
                 );
-                let data_len = open_file.inode.lock().file_data().len();
-                for i in 0..data_len {
-                    let byte = open_file.inode.lock().file_data().clone()[i];
+                // println!("read from pipe");
+                // let data_len = open_file.inode.lock().file_data().len();
+                for i in 0..len {
+                    let file_data = open_file.inode.lock().file_data().clone();
+                    let byte = file_data.get(i);
+                    let byte = match byte {
+                        Some(byte) => *byte,
+                        None => 0,
+                    };
                     buffers[i][0] = byte;
+                    println!("byte: {}", byte);
                 }
                 // for buffer in buffers {
                 //     for byte in buffer {
@@ -330,7 +338,7 @@ pub fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
                 //     }
                 // }
                 // println!("fs.rs:214 - sys_read: fd {}", fd);
-                return data_len as isize;
+                return len as isize;
             }
             let inode = open_file.inode.clone();
             let mut read_bytes = 0;
@@ -742,7 +750,7 @@ pub fn sys_pipe2(pipe: *mut u32) -> isize {
         *pipe.add(1) = write_fd as u32;
         // println!("pipe2: pipe: {:p}", (pipe as *mut isize).offset(1));
     }
-    println!("pipe2: read_fd: {}, write_fd: {}", read_fd, write_fd);
+    // println!("pipe2: read_fd: {}, write_fd: {}", read_fd, write_fd);
 
     // test string as below
     // println!("cpid: 0");
