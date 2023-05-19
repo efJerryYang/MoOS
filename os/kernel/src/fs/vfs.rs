@@ -132,6 +132,14 @@ pub trait INode: Any + Sync + Send {
     fn is_pipe(&self) -> bool;
 
     fn write_to_pipe(&mut self, buf: &[u8]) -> Result<usize>;
+
+    fn get_pipe_read_pos(&self) -> usize;
+
+    fn set_pipe_read_pos(&mut self, pos: usize);
+
+    fn get_pipe_write_pos(&self) -> usize;
+
+    fn set_pipe_write_pos(&mut self, pos: usize);
     
 }
 

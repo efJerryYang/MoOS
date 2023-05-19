@@ -5,6 +5,7 @@ use core::{
     ops::Add,
 };
 
+use crate::syscall::sys_yield;
 use alloc::{
     format,
     string::{String, ToString},
@@ -54,7 +55,7 @@ pub fn sys_getcwd(buf: *mut u8, size: usize) -> isize {
 // int openat(int dirfd,const char *path, int flags)
 pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     let task = myproc();
-    let mut fd_manager = &mut task.fd_manager.lock();
+    let mut fd_manager = &mut task.fd_manager;
 
     // println!("openat: dir fd: {}, path: {}, flags: {}", dirfd, path, flags);
     let start_dir_path;
@@ -173,7 +174,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
 // int close(int fd)
 pub fn sys_close(fd: isize) -> isize {
     let task = myproc();
-    let mut fd_manager = &mut task.fd_manager.lock();
+    let mut fd_manager = &mut task.fd_manager;
     if fd as usize >= fd_manager.len() {
         return -1;
     }
@@ -184,7 +185,7 @@ pub fn sys_close(fd: isize) -> isize {
 /// write buf of length `len`  to a file with `fd`
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let task = myproc();
-    let fd_manager = task.fd_manager.lock();
+    let fd_manager = &mut task.fd_manager;
 
     match fd {
         FD_STDOUT => {
@@ -204,19 +205,20 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
         other => {
             println!("sys_write: fd: {}, buf: {:?}, len: {}", fd, buf, len);
             if other >= fd_manager.len() {
-                // println!(
-                //     "sys_write: fd: {} not exist (max: {})",
-                //     fd,
-                //     fd_manager.len()
-                // );
+                println!(
+                    "sys_write: fd: {} not exist (max: {})",
+                    fd,
+                    fd_manager.len()
+                );
                 return -1;
             }
             let file_descriptor = &fd_manager.fd_array[other];
             if !file_descriptor.writable {
-                // println!("sys_write: fd: {} not writable", other);
+                println!("sys_write: fd: {} not writable", other);
                 return -1;
             }
             // if is stdout
+            println!("sys_write: fd: {} is stdout", other);
             if !file_descriptor.readable {
                 // println!("redirect to stdout");
                 let buffers = translated_byte_buffer(
@@ -273,10 +275,10 @@ pub fn sys_mount() -> isize {
     0
 }
 
-pub fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
+pub unsafe fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
     // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
     let task = myproc();
-    let fd_manager = task.fd_manager.lock();
+    let fd_manager = &mut task.fd_manager;
     // println!("fd_manager.len() = {}", fd_manager.len());
     // println!("fd: {}", fd);
     let fd = fd as usize;
@@ -294,7 +296,7 @@ pub fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
             return 0;
         }
         other => {
-            println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
+            // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
             if other >= fd_manager.len() {
                 return 0;
             }
@@ -320,17 +322,25 @@ pub fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
                     buf,
                     len,
                 );
-                // println!("read from pipe");
+                println!("read from pipe");
                 // let data_len = open_file.inode.lock().file_data().len();
                 for i in 0..len {
                     let file_data = open_file.inode.lock().file_data().clone();
+                    let offset = open_file.offset;
                     let byte = file_data.get(i);
                     let byte = match byte {
-                        Some(byte) => *byte,
-                        None => 0,
+                        Some(byte) => {
+                            println!("sys_read: pipe is not empty");
+                            *byte
+                        }
+                        None => {
+                            // println!("sys_read: pipe is empty");
+                            sys_yield();
+                            0
+                        }
                     };
                     buffers[i][0] = byte;
-                    println!("byte: {}", byte);
+                    // println!("byte: {}", byte);
                 }
                 // for buffer in buffers {
                 //     for byte in buffer {
@@ -371,7 +381,7 @@ pub fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
 
 pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
     let task = myproc();
-    let fd_manager = task.fd_manager.lock();
+    let fd_manager = &mut task.fd_manager;
 
     let file_descriptor = &fd_manager.fd_array[fd];
     unsafe {
@@ -450,7 +460,7 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
 pub fn sys_dup(fd: isize) -> isize {
     let fd = fd as usize;
     let task = myproc();
-    let mut fd_manager = task.fd_manager.lock();
+    let mut fd_manager = &mut task.fd_manager;
 
     if fd >= fd_manager.len() {
         return -1;
@@ -491,7 +501,7 @@ pub fn sys_dup3(fd: isize, new_fd: isize, flags: isize) -> isize {
     let new_fd = new_fd as usize;
     let flags = flags as usize;
     let task = myproc();
-    let mut fd_manager = task.fd_manager.lock();
+    let mut fd_manager = &mut task.fd_manager;
 
     if fd >= fd_manager.len() {
         return -1;
@@ -538,7 +548,7 @@ pub fn sys_mkdirat(fd: isize, path: &str, mode: usize) -> isize {
     let fd = fd as usize;
     let mode = mode as u16;
     let task = myproc();
-    let mut fd_manager = task.fd_manager.lock();
+    let mut fd_manager = &mut task.fd_manager;
 
     if fd >= fd_manager.len() {
         return 0; // TODO should return -1
@@ -596,7 +606,7 @@ pub fn sys_mkdirat(fd: isize, path: &str, mode: usize) -> isize {
 
 pub fn sys_chdir(path: &str) -> isize {
     let task = myproc();
-    let mut fd_manager = task.fd_manager.lock();
+    let mut fd_manager = &mut task.fd_manager;
 
     let mut path_iter = path.split('/');
     let mut current_dir = task.cwd.clone();
@@ -626,7 +636,7 @@ pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
     // println!("openat: fd: {}, buf: {:?}", fd, buf);
     let fd = fd as usize;
     let task = myproc();
-    let mut fd_manager = task.fd_manager.lock();
+    let mut fd_manager = &mut task.fd_manager;
 
     if fd >= fd_manager.len() {
         return -1;
@@ -687,7 +697,7 @@ syscall(SYS_unlinkat, dirfd, path, flags);
 pub fn sys_unlinkat(fd: isize, path: &str, flags: usize) -> isize {
     // println!("sys_unlinkat: fd: {}, path: {}, flags: {}", fd, path, flags);
     let task = myproc();
-    let mut fd_manager = task.fd_manager.lock();
+    let mut fd_manager = &mut task.fd_manager;
 
     if fd >= fd_manager.len() as isize {
         return -1;
@@ -727,7 +737,7 @@ pub fn sys_unlinkat(fd: isize, path: &str, flags: usize) -> isize {
 
 pub fn sys_pipe2(pipe: *mut u32) -> isize {
     let task = myproc();
-    let mut fd_manager = task.fd_manager.lock();
+    let mut fd_manager = &mut task.fd_manager;
 
     let read_fd = fd_manager.alloc_fd(true, false);
     let write_fd = fd_manager.alloc_fd(false, true);
@@ -737,6 +747,7 @@ pub fn sys_pipe2(pipe: *mut u32) -> isize {
     fd_manager.fd_array[read_fd].open_file = Arc::new(OpenFile::new_pipe_read(Arc::clone(&buf)));
     fd_manager.fd_array[write_fd].open_file = Arc::new(OpenFile::new_pipe_write(Arc::clone(&buf)));
 
+    println!("fd_manager.len(): {}", fd_manager.len());
     global_buffer_list.insert(buf);
 
     // pipe[0] = read_fd;

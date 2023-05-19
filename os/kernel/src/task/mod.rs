@@ -156,6 +156,7 @@ pub struct FileDescriptor {
     pub writable: bool,
 }
 
+#[derive(Clone)]
 pub struct FdManager {
     pub fd_array: Vec<FileDescriptor>,
 }
@@ -287,7 +288,7 @@ pub struct PCB {
     pub utime: usize,
     pub ktime: usize,
     pub cwd: String,
-    pub fd_manager: Arc<Mutex<FdManager>>,
+    pub fd_manager: FdManager,
 }
 
 impl PCB {
@@ -305,7 +306,7 @@ impl PCB {
             otime: 0,
             ktime: 0,
             cwd: "/".to_string(),
-            fd_manager: Arc::new(Mutex::new(FdManager::new())),
+            fd_manager: FdManager::new(),
         }
     }
 }

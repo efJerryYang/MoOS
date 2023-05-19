@@ -183,6 +183,17 @@ impl INode for RegFileINode {
     fn write_to_pipe(&mut self, buf: &[u8]) -> Result<usize> {
         return Ok(0);
     }
+    fn get_pipe_read_pos(&self) -> usize {
+        return 0;
+    }
+
+    fn set_pipe_read_pos(&mut self, _pos: usize) {}
+
+    fn get_pipe_write_pos(&self) -> usize {
+        return 0;
+    }
+
+    fn set_pipe_write_pos(&mut self, _pos: usize) {}
 }
 
 pub struct TerminalINode {
@@ -284,6 +295,18 @@ impl INode for TerminalINode {
     fn write_to_pipe(&mut self, buf: &[u8]) -> Result<usize> {
         return Ok(0);
     }
+
+    fn get_pipe_read_pos(&self) -> usize {
+        return 0;
+    }
+
+    fn set_pipe_read_pos(&mut self, _pos: usize) {}
+
+    fn get_pipe_write_pos(&self) -> usize {
+        return 0;
+    }
+
+    fn set_pipe_write_pos(&mut self, _pos: usize) {}
 }
 
 #[repr(C)]
@@ -329,7 +352,7 @@ pub struct Stat {
     pub st_mtime_nsec: u64,
     pub st_ctime_sec: u64,
     pub st_ctime_nsec: u64,
-    pub __unused: [u32;2],
+    pub __unused: [u32; 2],
 }
 
 impl Stat {
@@ -351,9 +374,9 @@ impl Stat {
             st_mtime_nsec: Timespec::default().nsec as u64,
             st_ctime_sec: Timespec::default().sec as u64,
             st_ctime_nsec: Timespec::default().nsec as u64,
-			__pad:0,
-			__pad2:0,
-			__unused:[0,0],
+            __pad: 0,
+            __pad2: 0,
+            __unused: [0, 0],
         }
     }
 }
@@ -361,7 +384,7 @@ impl Stat {
 pub struct PipeINode {
     pub readable: bool,
     pub writable: bool,
-    
+
     pub pipe: bool,
     pub read_pos: usize,
     pub write_pos: usize,
@@ -466,5 +489,19 @@ impl INode for PipeINode {
         }
 
         Ok(len)
+    }
+    fn get_pipe_read_pos(&self) -> usize {
+        return self.read_pos;
+    }
+    fn get_pipe_write_pos(&self) -> usize {
+        return self.write_pos;
+    }
+
+    fn set_pipe_read_pos(&mut self, pos: usize) {
+        self.read_pos = pos;
+    }
+
+    fn set_pipe_write_pos(&mut self, pos: usize) {
+        self.write_pos = pos;
     }
 }
