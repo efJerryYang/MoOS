@@ -62,6 +62,13 @@ pub unsafe fn trap_handler() -> ! {
 			let cx:&mut TrapFrame=task_list.exclusive_access()[mycpu().proc_idx].trapframe_ppn.get_mut();
 			println!("USER TRAP: stval={:#x},pc={:#x}",stval,cx.sepc);
             println!("[kernel] PageFault in application, kernel killed it.");
+			match scause.cause(){
+				Trap::Exception(Exception::StoreFault) =>{println!("StoreFault");}
+				Trap::Exception(Exception::StorePageFault) =>{println!("StorePageFault");}
+				Trap::Exception(Exception::LoadFault)=>{println!("LoadFault");}
+				Trap::Exception(Exception::LoadPageFault)=>{println!("LoadPageFault");}
+				_=>{}
+			}
 			kill();
         }
         Trap::Exception(Exception::IllegalInstruction) => {

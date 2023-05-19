@@ -5,7 +5,7 @@ use core::{
     ops::Add,
 };
 
-use crate::syscall::sys_yield;
+use crate::{syscall::sys_yield, mm::page_table::copy_out};
 use alloc::{
     format,
     string::{String, ToString},
@@ -55,7 +55,7 @@ pub fn sys_getcwd(buf: *mut u8, size: usize) -> isize {
 // int openat(int dirfd,const char *path, int flags)
 pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     let task = myproc();
-    let mut fd_manager = &mut task.fd_manager;
+    let fd_manager = &mut task.fd_manager;
 
     // println!("openat: dir fd: {}, path: {}, flags: {}", dirfd, path, flags);
     let start_dir_path;
@@ -86,6 +86,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     // ); // TODO: fix incorrect start_dir_path
     let abs_path = format!("{}{}", start_dir_path, rel_path);
     let fd;
+	// println!("!!!{}",abs_path);
     let inode = match global_dentry_cache.get(&abs_path) {
         Some(inode) => {
             if &inode.lock().file_name() == "null" {
@@ -121,6 +122,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
             for (i, fd_ref) in fd_manager.fd_array.iter().enumerate() {
                 if Arc::ptr_eq(&fd_ref.open_file.inode, &inode) {
                     fd_manager.fd_array[i] = file_descriptor;
+					// println!("!!!{}",233);
                     return i as isize;
                 }
             }
@@ -128,7 +130,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
             inode.clone()
         }
         None => {
-            // println!("[debug]creating new file.");
+            // println!("[debug]CREATING new file.");
             // create a new file in fs
             let new_inode = Arc::new(Mutex::new(RegFileINode {
                 // Initialize the new inode with the required fields
@@ -167,7 +169,6 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
             new_inode
         }
     };
-
     fd as isize
 }
 
@@ -636,25 +637,9 @@ pub fn sys_chdir(path: &str) -> isize {
 // SYSCALL_FSSTAT => sys_fstat(args[0] as isize, args[1] as *mut u8),
 
 pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
-    // let stat = Stat::new();
-    // let x=buf as *mut Stat;
-    // unsafe {
-    // 	*x=stat;
-    // 	for i in 0..16{
-    // 		for j in 0..16{
-    // 			print!("{:02x} ",*buf.add(i*16+j));
-    // 		}
-    // 		println!("");
-    // 	}
-    // 	println!("\n");
-    // }
-
-    // return 0;
-
-    // println!("openat: fd: {}, buf: {:?}", fd, buf);
-    let fd = fd as usize;
+	let fd = fd as usize;
     let task = myproc();
-    let mut fd_manager = &mut task.fd_manager;
+    let fd_manager = &mut task.fd_manager;
 
     if fd >= fd_manager.len() {
         return -1;
@@ -664,31 +649,19 @@ pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
     if !file_descriptor.readable {
         return -1;
     }
-
-    let open_file = file_descriptor.open_file.clone();
-    let inode = open_file.inode.clone();
-
-    let mut buf_ptr = buf;
-    let mut bytes_written = 0;
-
     let mut stat = Stat::new();
+	println!("[je]{}",size_of::<Stat>());
 
-    let alignment = align_of::<Stat>();
-    let align_offset = buf.align_offset(alignment);
-    let aligned_buf_ptr = if align_offset == 0 {
-        buf
-    } else {
-        unsafe { buf.add(align_offset) }
-    };
-
-    let stat_size = size_of::<Stat>();
-    unsafe {
-        // Using ptr::write instead of copy_nonoverlapping
-        core::ptr::write(aligned_buf_ptr as *mut Stat, stat);
-    }
-    bytes_written += stat_size;
-    bytes_written as isize;
-    return 0;
+	stat.st_size=fd_manager.fd_array[fd].open_file.inode.lock().file_size() as u32;
+	// println!("file_data:{:?}",fd_manager.fd_array[fd].open_file.inode.lock().file_data());
+	// println!("file_sss:{:?}",fd_manager.fd_array[fd].open_file.inode.lock().file_size());
+	// println!("file_nuckear:{:?}",stat.st_size);
+	unsafe {
+		copy_out(myproc().memory_set.token(), buf, &mut stat as *mut Stat as *mut u8, size_of::<Stat>());
+		// *(buf as *mut Stat)=stat;
+		// println!("xxxxfile_nuckear:{:?}",(*(buf as *mut Stat)).st_size);
+	}
+	return 0;
 }
 
 /*

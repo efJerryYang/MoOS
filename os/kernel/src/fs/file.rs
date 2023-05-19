@@ -331,7 +331,7 @@ impl Dirent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone, Copy)]
 #[repr(C)]
 pub struct Stat {
     pub st_dev: u64,

@@ -167,6 +167,31 @@ pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&
     v
 }
 
+pub fn copy_out(token: usize, ptr: *const u8, src:* const u8, len: usize) -> () {
+    let page_table = PageTable::from_token(token);
+    let mut start = ptr as usize;
+    let mut start_src = src as usize;
+    let end = start + len;
+    while start < end {
+        let start_va: VirtAddr = VirtAddr::from(start);
+        let mut vpn = start_va.floor();
+        let ppn = page_table.translate(vpn).unwrap().ppn();
+        vpn.step();
+        let mut end_va: VirtAddr = vpn.into();
+        end_va = end_va.min(VirtAddr::from(end));
+        if end_va.page_offset() == 0 {
+			let x=&mut ppn.get_bytes_array()[start_va.page_offset()..];
+			unsafe{x.copy_from_slice(core::slice::from_raw_parts(start_src as *mut u8,x.len()));}
+        } else {
+			let x=&mut ppn.get_bytes_array()[start_va.page_offset()..end_va.page_offset()];
+			unsafe{x.copy_from_slice(core::slice::from_raw_parts(start_src as *mut u8,x.len()));}
+        }
+		let mut dlt:usize=end_va.into();
+		dlt-=start;
+		start_src+=dlt;
+        start = end_va.into();
+    }
+}
 
 pub fn translate_str(token: usize, ptr: *const u8) -> String {
     let page_table = PageTable::from_token(token);

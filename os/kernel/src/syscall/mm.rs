@@ -2,8 +2,8 @@ use alloc::task;
 
 use crate::{
     config::{PAGE_SIZE, PAGE_SIZE_BITS},
-    mm::{MapPermission, VirtAddr, VirtPageNum},
-    task::{cpu::mycpu, task_list},
+    mm::{MapPermission, VirtAddr, VirtPageNum, memory_set::{MapArea, MapType}},
+    task::{cpu::mycpu, task_list, myproc},
 };
 
 pub fn sys_brk(_brk: usize) -> isize {
@@ -78,8 +78,14 @@ pub fn sys_brk(_brk: usize) -> isize {
     }
 }
 
-pub fn sys_mmap(start: *mut usize, len: usize, prot: i32, flag: i32, fd: i32, off: usize) -> isize {
-    return 0;
+pub fn sys_mmap(start: usize, len: usize, prot: i32, flag: i32, fd: i32, off: usize) -> isize {
+	let pcb=myproc();
+	let startva= if start==0 {pcb.heap_pos} else{start.into()}.0;
+	println!("startva:{:#x}",startva);
+	// pcb.memory_set.push(MapArea::new(startva.into(), (startva+len).into(), MapType::Framed, MapPermission::R|MapPermission::W|MapPermission::U), 
+	// 	None
+	// );
+	return startva as isize;
 }
 
 pub fn sys_munmap(start: *mut usize, len: usize) -> isize {
