@@ -1,2 +1,0 @@
-  Write to pipe successfully.
-  Write to pipe successfully.
