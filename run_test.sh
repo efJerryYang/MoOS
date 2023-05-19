@@ -96,3 +96,6 @@ echo ""
 echo "Generated files (ignored by git):"
 echo "Serial output of QEMU: os_serial_out.txt"
 echo "Makefile (make local): makefile_stdout_stderr.txt"
+
+# Clean up
+rm -rf testsuits-for-oskernel/riscv-syscalls-testing/user/src/oscomp/__pycache__
