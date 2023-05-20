@@ -1,9 +1,5 @@
 ![hitsz-logo](docs/hitsz-logo.jpg)
 
-# OSKernel2023-MoOS
-
-操作系统大赛-内核实现赛道-区域赛排行榜
-
 ![pre-2023_leaderboard](docs/pre-2023_leaderboard.png)
 
 ## 项目介绍
