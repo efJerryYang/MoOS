@@ -2,10 +2,10 @@
 
 use core::{
     mem::{align_of, size_of},
-    ops::Add,
+    ops::Add, slice, fmt::write,
 };
 
-use crate::{syscall::sys_yield, mm::page_table::copy_out};
+use crate::{syscall::sys_yield, mm::page_table::copy_out, console::print};
 use alloc::{
     format,
     string::{String, ToString},
@@ -93,11 +93,11 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
                 // println!("openat: file not found 'null'");
                 return -1;
             }
-            let open_file = Arc::new(OpenFile {
+            let open_file = Arc::new(Mutex::new(OpenFile {
                 offset: 0,
                 status_flags: flags as u32,
                 inode: inode.clone(),
-            });
+            }));
 
             let file_descriptor = FileDescriptor {
                 open_file: open_file.clone(),
@@ -120,7 +120,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
             //     OpenFlags::RDWR.bits()
             // );
             for (i, fd_ref) in fd_manager.fd_array.iter().enumerate() {
-                if Arc::ptr_eq(&fd_ref.open_file.inode, &inode) {
+                if Arc::ptr_eq(&fd_ref.open_file.lock().inode, &inode) {
                     fd_manager.fd_array[i] = file_descriptor;
 					// println!("!!!{}",233);
                     return i as isize;
@@ -147,12 +147,11 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
             global_dentry_cache.insert(&abs_path, new_inode.clone());
 
             // add open file to global open file table
-            let open_file = Arc::new(OpenFile {
+            let open_file = Arc::new(Mutex::new(OpenFile {
                 offset: 0,
                 status_flags: flags as u32,
                 inode: new_inode.clone(),
-            });
-            global_open_file_table.insert(open_file.clone());
+            }));
 
             // update fd manager
             let file_descriptor = FileDescriptor {
@@ -175,7 +174,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
 // int close(int fd)
 pub fn sys_close(fd: isize) -> isize {
     let task = myproc();
-    let mut fd_manager = &mut task.fd_manager;
+    let fd_manager = &mut task.fd_manager;
     if fd as usize >= fd_manager.len() {
         return -1;
     }
@@ -185,84 +184,97 @@ pub fn sys_close(fd: isize) -> isize {
 
 /// write buf of length `len`  to a file with `fd`
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
-    let task = myproc();
-    let fd_manager = &mut task.fd_manager;
+	let task = myproc();
+	let fd_manager = &mut task.fd_manager;
+	let fde=&fd_manager.fd_array[fd];
+	if(!fde.writable){
+		return -1;
+	}
+	let buffers = translated_byte_buffer(myproc().memory_set.token(),buf,len);
+	let mut sum=0;
+	for buffer in buffers{
+		let mut open_file=fde.open_file.lock();
+		let write_in=open_file.inode.lock().write_at(open_file.offset,buffer).unwrap();
+		open_file.offset+=write_in;
+		sum+=write_in;
+	}
+	return sum as isize;
 
-    match fd {
-        FD_STDOUT => {
-            let buffers = translated_byte_buffer(
-                task_list.exclusive_access()[mycpu().proc_idx]
-                    .memory_set
-                    .token(),
-                buf,
-                len,
-            );
-            for buffer in buffers {
-                let str = core::str::from_utf8(buffer).unwrap();
-                print!("{}", str);
-            }
-            len as isize
-        }
-        other => {
-            // println!("sys_write: fd: {}, buf: {:?}, len: {}", fd, buf, len);
-            if other >= fd_manager.len() {
-                // println!(
-                //     "sys_write: fd: {} not exist (max: {})",
-                //     fd,
-                //     fd_manager.len()
-                // );
-                return -1;
-            }
-            let file_descriptor = &fd_manager.fd_array[other];
-            if !file_descriptor.writable {
-                // println!("sys_write: fd: {} not writable", other);
-                return -1;
-            }
-            // if is stdout
-            // println!("sys_write: fd: {} is stdout", other);
-            if !file_descriptor.readable {
-                // println!("redirect to stdout");
-                let buffers = translated_byte_buffer(
-                    task_list.exclusive_access()[mycpu().proc_idx]
-                        .memory_set
-                        .token(),
-                    buf,
-                    len,
-                );
-                let is_pipe = fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
-                if is_pipe {
-                    let mut pipe = &mut file_descriptor.open_file.inode.lock();
-                    for buffer in buffers {
-                        // print!("write to pipe: {:?}\n", buffer);
-                        pipe.write_to_pipe(buffer);
-                    }
-                    let null_buffer: &[u8] = &[0];
-                    pipe.write_to_pipe(null_buffer);
-                    pipe.set_pipe_write_pos(len);
-                    return len as isize;
-                }
-                for buffer in buffers {
-                    let str = core::str::from_utf8(buffer).unwrap();
-                    print!("{}", str);
-                }
-                return len as isize;
-            }
+    // match fd {
+    //     FD_STDOUT => {
+    //         let buffers = translated_byte_buffer(
+    //             task_list.exclusive_access()[mycpu().proc_idx]
+    //                 .memory_set
+    //                 .token(),
+    //             buf,
+    //             len,
+    //         );
+    //         for buffer in buffers {
+    //             let str = core::str::from_utf8(buffer).unwrap();
+    //             print!("{}", str);
+    //         }
+    //         len as isize
+    //     }
+    //     other => {
+    //         // println!("sys_write: fd: {}, buf: {:?}, len: {}", fd, buf, len);
+    //         if other >= fd_manager.len() {
+    //             // println!(
+    //             //     "sys_write: fd: {} not exist (max: {})",
+    //             //     fd,
+    //             //     fd_manager.len()
+    //             // );
+    //             return -1;
+    //         }
+    //         let file_descriptor = &fd_manager.fd_array[other];
+    //         if !file_descriptor.writable {
+    //             // println!("sys_write: fd: {} not writable", other);
+    //             return -1;
+    //         }
+    //         // if is stdout
+    //         // println!("sys_write: fd: {} is stdout", other);
+    //         if !file_descriptor.readable {
+    //             // println!("redirect to stdout");
+    //             let buffers = translated_byte_buffer(
+    //                 task_list.exclusive_access()[mycpu().proc_idx]
+    //                     .memory_set
+    //                     .token(),
+    //                 buf,
+    //                 len,
+    //             );
+    //             let is_pipe = fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
+    //             if is_pipe {
+    //                 let mut pipe = &mut file_descriptor.open_file.inode.lock();
+    //                 for buffer in buffers {
+    //                     // print!("write to pipe: {:?}\n", buffer);
+    //                     pipe.write_to_pipe(buffer);
+    //                 }
+    //                 let null_buffer: &[u8] = &[0];
+    //                 pipe.write_to_pipe(null_buffer);
+    //                 pipe.set_pipe_write_pos(len);
+    //                 return len as isize;
+    //             }
+    //             for buffer in buffers {
+    //                 let str = core::str::from_utf8(buffer).unwrap();
+    //                 print!("{}", str);
+    //             }
+    //             return len as isize;
+    //         }
 
-            let mut open_file = file_descriptor.open_file.clone();
-            let inode = open_file.inode.clone();
-            let mut buf_iter = 0;
-            let buffers = translated_byte_buffer(task.memory_set.token(), buf, len);
+    //         let open_file = file_descriptor.open_file.clone();
+    //         let inode = open_file.inode.clone();
+    //         let mut buf_iter = 0;
+    //         let buffers = translated_byte_buffer(task.memory_set.token(), buf, len);
 
-            for buffer in buffers {
-                for byte in buffer {
-                    inode.lock().file_data().push(*byte);
-                    buf_iter += 1;
-                }
-            }
-            // open_file.offset += buf_iter;
-            buf_iter as isize
-        }
-    }
+    //         for buffer in buffers {
+    //             for byte in buffer {
+    //                 inode.lock().file_data().push(*byte);
+    //                 buf_iter += 1;
+    //             }
+    //         }
+    //         // open_file.offset += buf_iter;
+    //         buf_iter as isize
+    //     }
+    // }
 }
 
 pub fn sys_mount() -> isize {
@@ -279,119 +291,142 @@ pub fn sys_mount() -> isize {
     0
 }
 
-pub unsafe fn sys_read(fd: isize, buf: *mut u8, len: usize) -> isize {
+pub unsafe fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
     // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
     let task = myproc();
     let fd_manager = &mut task.fd_manager;
-    // println!("fd_manager.len() = {}", fd_manager.len());
-    // println!("fd: {}", fd);
-    let fd = fd as usize;
+	let fde=&fd_manager.fd_array[fd];
+	if !fde.readable {
+		return -1;
+	}
+	// println!("[read] len={},fd={}",len,fd);
+	let buffers = translated_byte_buffer(myproc().memory_set.token(),buf,len);
+	let mut sum=0;
+	for buffer in buffers{
+		for i in 0..10{
+			let mut open_file=fde.open_file.lock();
+			let read_in=open_file.inode.lock().read_at(open_file.offset,buffer).unwrap();
+			open_file.offset+=read_in;
+			sum+=read_in;
+			if(read_in>0){
+				break;
+			}else{
+				drop(open_file);
+				sys_yield();
+			}
+		}
+	}
+	return sum as isize;
 
-    match fd {
-        FD_STDIN => {
-            let mut buffers = translated_byte_buffer(
-                task_list.exclusive_access()[mycpu().proc_idx]
-                    .memory_set
-                    .token(),
-                buf,
-                1,
-            );
-            buffers[0][0] = console_getchar() as u8;
-            return 0;
-        }
-        other => {
-            // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
-            if other >= fd_manager.len() {
-                return 0;
-            }
-            let file_descriptor = &fd_manager.fd_array[other];
-            // println!(
-            //     "file_descriptor = {}, {}, {}",
-            //     file_descriptor.readable,
-            //     file_descriptor.writable,
-            //     file_descriptor.open_file.inode.lock().file_size()
-            // );
-            // if !file_descriptor.readable {
-            //     return -1;
-            // }
-            // println!("[read] fs.rs:214 - sys_read: fd {}", fd);
-            let is_pipe = fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
+    // // println!("fd_manager.len() = {}", fd_manager.len());
+    // // println!("fd: {}", fd);&
+    // let fd = fd as usize;
+    // match fd {
+    //     FD_STDIN => {
+    //         let mut buffers = translated_byte_buffer(
+    //             task_list.exclusive_access()[mycpu().proc_idx]
+    //                 .memory_set
+    //                 .token(),
+    //             buf,
+    //             1,
+    //         );
+    //         buffers[0][0] = console_getchar() as u8;
+    //         return 0;
+    //     }
+    //     other => {
+	// 		return -1;
+    //         // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
+    //         if other >= fd_manager.len() {
+    //             return 0;
+    //         }
+    //         let file_descriptor = &fd_manager.fd_array[other];
+    //         // println!(
+    //         //     "file_descriptor = {}, {}, {}",
+    //         //     file_descriptor.readable,
+    //         //     file_descriptor.writable,
+    //         //     file_descriptor.open_file.inode.lock().file_size()
+    //         // );
+    //         // if !file_descriptor.readable {
+    //         //     return -1;
+    //         // }
+    //         // println!("[read] fs.rs:214 - sys_read: fd {}", fd);
+    //         let is_pipe = fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
 
-            let mut open_file = file_descriptor.open_file.clone();
-            if is_pipe {
-                let mut buffers = translated_byte_buffer(
-                    task_list.exclusive_access()[mycpu().proc_idx]
-                        .memory_set
-                        .token(),
-                    buf,
-                    len,
-                );
-                // println!("read from pipe");
-                // let data_len = open_file.inode.lock().file_data().len();
-                // print the content of pipe buf
-                let buf = open_file.inode.lock().file_data().clone();
-                // println!("buf: {:?}", buf);
-                for i in 0..len {
-                    let mut file_data = open_file.inode.lock().file_data().clone();
-                    let mut pos = open_file.inode.lock().get_pipe_read_pos();
-                    let mut byte = file_data.get(pos);
-                    while byte.is_none() {
-                        sys_yield();
-                        file_data = open_file.inode.lock().file_data().clone();
-                        pos = open_file.inode.lock().get_pipe_read_pos();
-                        byte = file_data.get(1 + pos);
-                    }
-                    let byte = match byte {
-                        Some(byte) => {
-                            // println!("sys_read: pipe is not empty");
-                            *byte
-                        }
-                        None => {
-                            // println!("sys_read: pipe is empty");
-                            0
-                        }
-                    };
-                    buffers[i][0] = byte;
-                    open_file.inode.lock().set_pipe_read_pos(pos + 1);
-                    if byte == 0 {
-                        return i as isize;
-                    }
+    //         let mut open_file = file_descriptor.open_file.clone();
+    //         if is_pipe {
+    //             let mut buffers = translated_byte_buffer(
+    //                 task_list.exclusive_access()[mycpu().proc_idx]
+    //                     .memory_set
+    //                     .token(),
+    //                 buf,
+    //                 len,
+    //             );
+    //             // println!("read from pipe");
+    //             // let data_len = open_file.inode.lock().file_data().len();
+    //             // print the content of pipe buf
+    //             let buf = open_file.inode.lock().file_data().clone();
+    //             // println!("buf: {:?}", buf);
+    //             for i in 0..len {
+    //                 let mut file_data = open_file.inode.lock().file_data().clone();
+    //                 let mut pos = open_file.inode.lock().get_pipe_read_pos();
+    //                 let mut byte = file_data.get(pos);
+    //                 while byte.is_none() {
+    //                     sys_yield();
+    //                     file_data = open_file.inode.lock().file_data().clone();
+    //                     pos = open_file.inode.lock().get_pipe_read_pos();
+    //                     byte = file_data.get(1 + pos);
+    //                 }
+    //                 let byte = match byte {
+    //                     Some(byte) => {
+    //                         // println!("sys_read: pipe is not empty");
+    //                         *byte
+    //                     }
+    //                     None => {
+    //                         // println!("sys_read: pipe is empty");
+    //                         0
+    //                     }
+    //                 };
+    //                 buffers[i][0] = byte;
+    //                 open_file.inode.lock().set_pipe_read_pos(pos + 1);
+    //                 if byte == 0 {
+    //                     return i as isize;
+    //                 }
 
-                    // println!("byte: {}", byte);
-                }
-                // for buffer in buffers {
-                //     for byte in buffer {
-                //         *byte = open_file.inode.lock().file_data().clone()[open_file.offset];
-                //     }
-                // }
-                // println!("fs.rs:214 - sys_read: fd {}", fd);
-                return len as isize;
-            }
-            let inode = open_file.inode.clone();
-            let mut read_bytes = 0;
-            let mut buf_iter = 0;
+    //                 // println!("byte: {}", byte);
+    //             }
+    //             // for buffer in buffers {
+    //             //     for byte in buffer {
+    //             //         *byte = open_file.inode.lock().file_data().clone()[open_file.offset];
+    //             //     }
+    //             // }
+    //             // println!("fs.rs:214 - sys_read: fd {}", fd);
+    //             return len as isize;
+    //         }
+    //         let inode = open_file.inode.clone();
+    //         let mut read_bytes = 0;
+    //         let mut buf_iter = 0;
 
-            // if open_file.offset >= inode.file_size() as usize {
-            //     return 0;
-            // }
-            // println!("fs.rs:223 - sys_read: fd {}", fd);
+    //         // if open_file.offset >= inode.file_size() as usize {
+    //         //     return 0;
+    //         // }
+    //         // println!("fs.rs:223 - sys_read: fd {}", fd);
 
-            let mut buffers = translated_byte_buffer(task.memory_set.token(), buf, len);
-            for buffer in buffers {
-                for byte in buffer {
-                    if open_file.offset + buf_iter < inode.lock().file_size() as usize {
-                        *byte = inode.lock().file_data().clone()[open_file.offset + buf_iter];
-                        buf_iter += 1;
-                        read_bytes += 1;
-                    } else {
-                        break;
-                    }
-                }
-            }
-            // println!("fs.rs:237 - sys_read: fd {}", fd);
-            read_bytes as isize
-        }
-    }
+    //         let mut buffers = translated_byte_buffer(task.memory_set.token(), buf, len);
+    //         for buffer in buffers {
+    //             for byte in buffer {
+    //                 if open_file.offset + buf_iter < inode.lock().file_size() as usize {
+    //                     *byte = inode.lock().file_data().clone()[open_file.offset + buf_iter];
+    //                     buf_iter += 1;
+    //                     read_bytes += 1;
+    //                 } else {
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //         // println!("fs.rs:237 - sys_read: fd {}", fd);
+    //         read_bytes as isize
+    //     }
+    // }
 }
 
 // pub const SYS_GETDENTS64: usize = 61;
@@ -410,7 +445,7 @@ pub fn sys_getdents64(fd: usize, buf: *mut u8, len: usize) -> isize {
 
     // println!("openat: fd: {}, buf: {:?}, len: {}", fd, buf, len);
     let open_file = file_descriptor.open_file.clone();
-    let inode = open_file.inode.clone();
+    let inode = open_file.lock().inode.clone();
     let mut entries: Vec<String> = Vec::new();
     entries = match inode.lock().list() {
         Ok(entries) => entries,
@@ -489,7 +524,7 @@ pub fn sys_dup(fd: isize) -> isize {
     }
 
     let open_file = file_descriptor.open_file.clone();
-    let inode = open_file.inode.clone();
+    let inode = open_file.lock().inode.clone();
 
     let mut new_fd = -1;
     for (i, fd) in fd_manager.fd_array.iter().enumerate() {
@@ -536,14 +571,14 @@ pub fn sys_dup3(fd: isize, new_fd: isize, flags: isize) -> isize {
     }
 
     let open_file = file_descriptor.open_file.clone();
-    let inode = open_file.inode.clone();
+    let inode = open_file.lock().inode.clone();
 
     if new_fd >= fd_manager.len() {
         for _ in fd_manager.len()..new_fd + 1 {
             fd_manager.fd_array.push(FileDescriptor {
                 readable: false,
                 writable: false,
-                open_file: Arc::new(OpenFile::new()),
+                open_file: Arc::new(Mutex::new(OpenFile::new())),
             });
         }
         // println!(
@@ -579,7 +614,7 @@ pub fn sys_mkdirat(fd: isize, path: &str, mode: usize) -> isize {
     // }
 
     let open_file = file_descriptor.open_file.clone();
-    let inode = open_file.inode.clone();
+    let inode = open_file.lock().inode.clone();
 
     let mut path_iter = path.split('/');
     let mut current_dir = inode.clone();
@@ -651,7 +686,7 @@ pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
     }
     let mut stat = Stat::new();
 
-	stat.st_size=fd_manager.fd_array[fd].open_file.inode.lock().file_size() as u32;
+	stat.st_size=fd_manager.fd_array[fd].open_file.lock().inode.lock().file_size() as u32;
 	// println!("file_data:{:?}",fd_manager.fd_array[fd].open_file.inode.lock().file_data());
 	// println!("file_sss:{:?}",fd_manager.fd_array[fd].open_file.inode.lock().file_size());
 	// println!("file_nuckear:{:?}",stat.st_size);
@@ -732,24 +767,16 @@ pub fn sys_pipe2(pipe: *mut u32) -> isize {
     let read_fd = fd_manager.alloc_fd(true, false);
     let write_fd = fd_manager.alloc_fd(false, true);
 
-    let buf = Arc::new(Mutex::new(Vec::<u8>::new()));
-
-    fd_manager.fd_array[read_fd].open_file = Arc::new(OpenFile::new_pipe_read(Arc::clone(&buf)));
-    fd_manager.fd_array[write_fd].open_file = Arc::new(OpenFile::new_pipe_write(Arc::clone(&buf)));
+    fd_manager.fd_array[read_fd].open_file = Arc::new(Mutex::new(OpenFile::new_pipe()));
+    fd_manager.fd_array[write_fd].open_file = fd_manager.fd_array[read_fd].open_file.clone();
 
     // println!("fd_manager.len(): {}", fd_manager.len());
-    global_buffer_list.insert(buf);
 
     // pipe[0] = read_fd;
     // pipe[1] = write_fd;
     unsafe {
-        // core::ptr::write(pipe as *mut isize, read_fd as isize);
         *pipe = read_fd as u32;
-        // println!("pipe2: pipe: {:p}", pipe as *mut isize);
-        // print out the value in the address
-        // core::ptr::write((pipe as *mut isize).offset(1), write_fd as isize);
         *pipe.add(1) = write_fd as u32;
-        // println!("pipe2: pipe: {:p}", (pipe as *mut isize).offset(1));
     }
     // println!("pipe2: read_fd: {}, write_fd: {}", read_fd, write_fd);
 

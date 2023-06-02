@@ -98,21 +98,14 @@ impl OpenFile {
         }
     }
 
-    pub fn new_pipe_read(buf: Arc<Mutex<Vec<u8>>>) -> Self {
+	pub fn new_pipe() -> Self {
         Self {
             offset: 0,
             status_flags: 0,
-            inode: Arc::new(Mutex::new(PipeINode::new_pipe_read(buf))),
+            inode: Arc::new(Mutex::new(PipeINode::new_pipe())),
         }
     }
 
-    pub fn new_pipe_write(buf: Arc<Mutex<Vec<u8>>>) -> Self {
-        Self {
-            offset: 0,
-            status_flags: 0,
-            inode: Arc::new(Mutex::new(PipeINode::new_pipe_write(buf))),
-        }
-    }
 }
 pub struct GlobalOpenFileTable {
     table: Arc<Mutex<Vec<OpenFile>>>,
@@ -151,7 +144,7 @@ impl GlobalBufferList {
 }
 #[derive(Clone)]
 pub struct FileDescriptor {
-    pub open_file: Arc<OpenFile>,
+    pub open_file: Arc<Mutex<OpenFile> >,
     pub readable: bool,
     pub writable: bool,
 }
@@ -166,17 +159,17 @@ impl FdManager {
         let mut v = Vec::new();
         // 0, 1, 2 are reserved for stdin, stdout, stderr
         v.push(FileDescriptor {
-            open_file: Arc::new(OpenFile::new_stdin()),
+            open_file: Arc::new(Mutex::new(OpenFile::new_stdin())),
             readable: true,
             writable: false,
         });
         v.push(FileDescriptor {
-            open_file: Arc::new(OpenFile::new_stdout()),
+            open_file: Arc::new(Mutex::new(OpenFile::new_stdout())),
             readable: false,
             writable: true,
         });
         v.push(FileDescriptor {
-            open_file: Arc::new(OpenFile::new_stderr()),
+            open_file: Arc::new(Mutex::new(OpenFile::new_stderr())),
             readable: false,
             writable: true,
         });
@@ -186,14 +179,13 @@ impl FdManager {
         self.fd_array.len()
     }
     pub fn close(&mut self, fd: usize) {
-        let mut fd: Option<&mut FileDescriptor> = self.fd_array.get_mut(fd);
+        let fd: Option<&mut FileDescriptor> = self.fd_array.get_mut(fd);
         if let Some(fd) = fd {
             if fd.readable || fd.writable {
                 // Do nothing
                 return;
             }
-            let open_file = fd.open_file.clone();
-            fd.open_file = Arc::new(OpenFile::new());
+            fd.open_file = Arc::new(Mutex::new(OpenFile::new()));
         }
     }
     pub fn insert(&mut self, file_descriptor: FileDescriptor) -> usize {
@@ -218,7 +210,7 @@ impl FdManager {
         //     i += 1;
         // }
         self.fd_array.push(FileDescriptor {
-            open_file: Arc::new(OpenFile::new()),
+            open_file: Arc::new(Mutex::new(OpenFile::new())),
             readable,
             writable,
         });
@@ -235,7 +227,7 @@ pub struct GlobalDentryCache {
 
 impl GlobalDentryCache {
     pub fn get(&self, path: &str) -> Option<Arc<Mutex<dyn INode>>> {
-        let mut table = self.table.lock();
+        let table = self.table.lock();
         match table.get(path) {
             Some(inode) => Some(inode.clone()),
             None => None,

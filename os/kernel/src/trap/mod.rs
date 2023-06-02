@@ -35,7 +35,10 @@ pub fn init() {
 }
 #[no_mangle]
 pub fn trap_from_kernel(){
-	println!("kernel trap");
+	println!("Kernel trap");
+	// let scause = scause::read(); 
+	// let stval = stval::read(); 
+	// println!("stval= {:#x}",stval);
 	panic!("kernel trap");
 }
 

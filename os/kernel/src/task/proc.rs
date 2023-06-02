@@ -114,6 +114,7 @@ pub unsafe fn schedule(){
 					&mut cpu.context as *mut ProcessContext,
 					&mut pcb.context as *mut ProcessContext
 				);
+				// println!("quiting :{}",idx);
 			}
 			idx+=1;
 			if(idx>=task_list.exclusive_access().len()){break;}

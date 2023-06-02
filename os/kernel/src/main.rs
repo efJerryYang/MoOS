@@ -77,15 +77,10 @@ unsafe fn crate_task_from_elf(userbin:&[u8]){
 unsafe fn load_user_file(){
 	extern "C" {fn init_start();fn init_end();}
 	crate_task_from_elf(slice::from_raw_parts(init_start as *const u8, init_end as usize-init_start as usize));
-	// crate_task_from_elf(include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getpid"));
-	// crate_task_from_elf(include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/getppid"));
 	mycpu().proc_idx=0;
 	schedule();
 }
 
-// lazy_static!{
-// 	pub static ref HART_CC:UPSafeCell<usize>=unsafe{UPSafeCell::new(0)};
-// }
 static LOCK:AtomicU8=AtomicU8::new(0);
 
 #[no_mangle]

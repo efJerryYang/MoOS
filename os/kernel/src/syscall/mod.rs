@@ -67,7 +67,7 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
         SYSCALL_EXIT => sys_exit(args[0] as i32),
 		SYSCALL_NANOSLEEP => sys_nanosleep(translate(args[0]) as *mut timespec,translate(args[1]) as *mut timespec),
-		SYSCALL_READ => sys_read(args[0] as isize, args[1] as *mut u8, args[2]),
+		SYSCALL_READ => sys_read(args[0] as usize, args[1] as *mut u8, args[2]),
 		SYSCALL_SCHED_YIELD=> sys_yield(),
 		SYSCALL_GETTIMEOFDAY=> sys_gettimeofday(args[0] as *mut usize),
 		SYSCALL_GETPID => sys_getpid(),

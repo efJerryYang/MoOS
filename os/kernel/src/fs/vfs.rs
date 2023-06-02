@@ -11,10 +11,10 @@ use core::str;
 /// Abstract file system object such as file or directory.
 pub trait INode: Any + Sync + Send {
     /// Read bytes at `offset` into `buf`, return the number of bytes read.
-    fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize>;
+    fn read_at(&mut self, offset: usize, buf: &mut [u8]) -> Result<usize>;
 
     /// Write bytes at `offset` from `buf`, return the number of bytes written.
-    fn write_at(&self, offset: usize, buf: &[u8]) -> Result<usize>;
+    fn write_at(&mut self, offset: usize, buf: &[u8]) -> Result<usize>;
 
     /// Poll the events, return a bitmap of events.
     fn poll(&self) -> Result<PollStatus>;
@@ -130,17 +130,6 @@ pub trait INode: Any + Sync + Send {
     fn file_name(&self) -> String;
 
     fn is_pipe(&self) -> bool;
-
-    fn write_to_pipe(&mut self, buf: &[u8]) -> Result<usize>;
-
-    fn get_pipe_read_pos(&self) -> usize;
-
-    fn set_pipe_read_pos(&mut self, pos: usize);
-
-    fn get_pipe_write_pos(&self) -> usize;
-
-    fn set_pipe_write_pos(&mut self, pos: usize);
-    
 }
 
 impl dyn INode {

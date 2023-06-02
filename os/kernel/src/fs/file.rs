@@ -1,13 +1,13 @@
 use crate::{
     console::print,
     fs::vfs::{INode, Metadata, Result, Timespec},
-    sbi::console_getchar,
+    sbi::console_getchar, syscall::process::sys_yield,
 };
-use _core::any::Any;
+use _core::{any::Any, cmp::min};
 use alloc::{
     string::{String, ToString},
     sync::Arc,
-    vec::Vec,
+    vec::Vec, collections::VecDeque,
 };
 use spin::Mutex;
 pub struct File {
@@ -125,11 +125,11 @@ impl RegFileINode {
 }
 
 impl INode for RegFileINode {
-    fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize> {
+    fn read_at(&mut self, offset: usize, buf: &mut [u8]) -> Result<usize> {
         if !self.readable {
             return Err(FsError::InvalidParam);
         }
-        let mut file = &self.file[offset..];
+        let file = &self.file[offset..];
         let len = buf.len();
         let mut pos = 0;
         for b in file {
@@ -138,22 +138,26 @@ impl INode for RegFileINode {
                 pos += 1;
             } else {
                 // buffer overflow
+				println!("[Reg Read] buffer overflow.");
                 return Ok(pos);
             }
         }
         return Ok(pos);
     }
-    fn write_at(&self, offset: usize, buf: &[u8]) -> Result<usize> {
+    fn write_at(&mut self, offset: usize, buf: &[u8]) -> Result<usize> {
         if !self.writable {
             return Err(FsError::InvalidParam);
         }
-        let mut file = &self.file;
+        let file = &mut self.file;
         let len = buf.len();
         let mut pos = 0;
         while pos < len {
-            // TODO 处理 offset 非 0 的情况
-            // TODO 处理可变引用的问题
-            // file.push(buf[pos]);
+			if pos+offset>file.len()  {
+				file.push(buf[pos]);
+			}
+			else {
+				file[pos+offset]=buf[pos];
+			}
             pos += 1;
         }
         return Ok(pos);
@@ -180,20 +184,6 @@ impl INode for RegFileINode {
     fn is_pipe(&self) -> bool {
         return false;
     }
-    fn write_to_pipe(&mut self, buf: &[u8]) -> Result<usize> {
-        return Ok(0);
-    }
-    fn get_pipe_read_pos(&self) -> usize {
-        return 0;
-    }
-
-    fn set_pipe_read_pos(&mut self, _pos: usize) {}
-
-    fn get_pipe_write_pos(&self) -> usize {
-        return 0;
-    }
-
-    fn set_pipe_write_pos(&mut self, _pos: usize) {}
 }
 
 pub struct TerminalINode {
@@ -229,26 +219,18 @@ impl TerminalINode {
 }
 // terminal read
 pub fn terminal_read(buf: &mut [u8]) -> Result<usize> {
-    let mut len = 0;
-    for b in buf {
-        *b = console_getchar() as u8;
-        len += 1;
-    }
-    Ok(len)
+	buf[0]=console_getchar() as u8;
+	Ok(1)
 }
 
 // terminal write
 pub fn terminal_write(buf: &[u8]) -> Result<usize> {
-    let mut len = 0;
-    for b in buf {
-        print!("{}", core::str::from_utf8(&[*b]).unwrap());
-        len += 1;
-    }
-    Ok(len)
+	print!("{}",core::str::from_utf8(buf).unwrap());
+    Ok(buf.len())
 }
 
 impl INode for TerminalINode {
-    fn read_at(&self, _offset: usize, buf: &mut [u8]) -> Result<usize> {
+    fn read_at(&mut self, _offset: usize, buf: &mut [u8]) -> Result<usize> {
         if !self.readable {
             return Err(FsError::InvalidParam);
         }
@@ -258,11 +240,11 @@ impl INode for TerminalINode {
         Ok(len)
     }
 
-    fn write_at(&self, _offset: usize, buf: &[u8]) -> Result<usize> {
-        if !self.writable {
-            return Err(FsError::InvalidParam);
+    fn write_at(&mut self, _offset: usize, buf: &[u8]) -> Result<usize> {
+		if !self.writable {
+			return Err(FsError::InvalidParam);
         }
-
+		
         let len = terminal_write(buf)?;
 
         Ok(len)
@@ -292,21 +274,6 @@ impl INode for TerminalINode {
     fn is_pipe(&self) -> bool {
         return false;
     }
-    fn write_to_pipe(&mut self, buf: &[u8]) -> Result<usize> {
-        return Ok(0);
-    }
-
-    fn get_pipe_read_pos(&self) -> usize {
-        return 0;
-    }
-
-    fn set_pipe_read_pos(&mut self, _pos: usize) {}
-
-    fn get_pipe_write_pos(&self) -> usize {
-        return 0;
-    }
-
-    fn set_pipe_write_pos(&mut self, _pos: usize) {}
 }
 
 #[repr(C)]
@@ -382,74 +349,40 @@ impl Stat {
 }
 
 pub struct PipeINode {
-    pub readable: bool,
-    pub writable: bool,
-
-    pub pipe: bool,
-    pub read_pos: usize,
-    pub write_pos: usize,
-    pub file: Arc<Mutex<Vec<u8>>>,
-    pub tmp: Vec<u8>,
+	pub st: usize,
+	pub buf: Vec<u8>,
 }
 
 impl PipeINode {
-    pub fn new_pipe_read(buf: Arc<Mutex<Vec<u8>>>) -> Self {
+    pub fn new_pipe() -> Self {
         Self {
-            readable: true,
-            writable: false,
-            pipe: true,
-            read_pos: 0,
-            write_pos: 0,
-            file: buf,
-            tmp: Vec::<u8>::new(),
-        }
-    }
-
-    pub fn new_pipe_write(buf: Arc<Mutex<Vec<u8>>>) -> Self {
-        Self {
-            readable: false,
-            writable: true,
-            pipe: true,
-            read_pos: 0,
-            write_pos: 0,
-            file: buf,
-            tmp: Vec::<u8>::new(),
+			st:0,
+			buf:Vec::new(),
         }
     }
 }
 
 impl INode for PipeINode {
-    fn read_at(&self, _offset: usize, buf: &mut [u8]) -> Result<usize> {
-        if !self.readable {
-            return Err(FsError::InvalidParam);
-        }
-
-        let len = self.file.lock().len();
-        if len == 0 {
-            return Err(FsError::Again);
-        }
-
-        let mut i = 0;
-        for b in buf {
-            *b = self.file.lock()[i];
-            i += 1;
-        }
-
-        Ok(len)
+    fn read_at(&mut self, _offset: usize, buf: &mut [u8]) -> Result<usize> {
+		// println!("this read");
+		let pipe_buf: &Vec<u8>=&self.buf;
+		let size: usize=min(pipe_buf.len()-self.st,buf.len());
+		for i in 0..size{
+			buf[i]=pipe_buf[i+self.st];
+		}
+		// println!("[{}]",core::str::from_utf8(pipe_buf).unwrap());
+		self.st+=size;
+		Ok(size)
     }
-
-    fn write_at(&self, _offset: usize, buf: &[u8]) -> Result<usize> {
-        if !self.writable {
-            return Err(FsError::InvalidParam);
-        }
-
-        let mut len = 0;
-        for b in buf {
-            // self.file.push(*b);
-            len += 1;
-        }
-
-        Ok(len)
+	
+    fn write_at(&mut self, _offset: usize, buf: &[u8]) -> Result<usize> {
+		// println!("this write");
+		let pipe_buf=&mut self.buf;
+		let size=buf.len();
+		for i in 0..size{
+			pipe_buf.push(buf[i]);
+		}
+		Ok(size)
     }
 
     // Implement other required INode methods as needed or with default behavior.
@@ -463,47 +396,18 @@ impl INode for PipeINode {
     }
 
     fn file_size(&self) -> usize {
-        let file = self.file.lock();
+        let file = &self.buf;
         return file.len();
     }
 
     fn file_data(&mut self) -> &mut Vec<u8> {
-        let tmp = self.file.lock().clone();
-        self.tmp = tmp;
-        return &mut self.tmp;
+		return &mut self.buf;
+		// return 0;
     }
     fn file_name(&self) -> String {
         return "null".to_string();
     }
     fn is_pipe(&self) -> bool {
-        return self.pipe;
-    }
-    fn write_to_pipe(&mut self, buf: &[u8]) -> Result<usize> {
-        if !self.writable {
-            return Err(FsError::InvalidParam);
-        }
-
-        let mut len = 0;
-        for b in buf {
-            self.file.lock().push(*b);
-            len += 1;
-        }
-        self.set_pipe_write_pos(self.file_size());
-
-        Ok(len)
-    }
-    fn get_pipe_read_pos(&self) -> usize {
-        return self.read_pos;
-    }
-    fn get_pipe_write_pos(&self) -> usize {
-        return self.write_pos;
-    }
-
-    fn set_pipe_read_pos(&mut self, pos: usize) {
-        self.read_pos = pos;
-    }
-
-    fn set_pipe_write_pos(&mut self, pos: usize) {
-        self.write_pos = pos;
+        return true;
     }
 }

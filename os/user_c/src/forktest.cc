@@ -8,6 +8,7 @@ signed main(){
 	for(int i=1;i<=3;++i){
 		fork();
 		printf("[%d] Hello world!\n",getpid());
+		
 	}
 	return 0;
 }
