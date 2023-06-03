@@ -6,10 +6,10 @@ use crate::{
     mm::{PhysAddr, VirtAddr},
 };
 use alloc::string::{String, ToString};
-use core::arch::global_asm;
-use hashbrown::HashMap;
-
 pub use context::ProcessContext;
+use core::arch::global_asm;
+use core::default::Default;
+use hashbrown::HashMap;
 pub mod context;
 pub mod cpu;
 pub mod proc;
@@ -30,18 +30,10 @@ lazy_static! {
     pub static ref task_list: UPSafeCell<Vec<PCB>> = unsafe { UPSafeCell::new(Vec::new()) };
 }
 lazy_static! {
-    pub static ref global_dentry_cache: GlobalDentryCache = GlobalDentryCache {
-        table: Arc::new(Mutex::new(HashMap::new())),
-    };
-    pub static ref global_inode_table: GlobalInodeTable = GlobalInodeTable {
-        table: Arc::new(Mutex::new(Vec::new())),
-    };
-    pub static ref global_open_file_table: GlobalOpenFileTable = GlobalOpenFileTable {
-        table: Arc::new(Mutex::new(Vec::new())),
-    };
-    pub static ref global_buffer_list: GlobalBufferList = GlobalBufferList {
-        list: Arc::new(Mutex::new(Vec::new())),
-    };
+    pub static ref global_dentry_cache: GlobalDentryCache = Default::default();
+    pub static ref global_inode_table: GlobalInodeTable = Default::default();
+    pub static ref global_open_file_table: GlobalOpenFileTable = Default::default();
+    pub static ref global_buffer_list: GlobalBufferList = Default::default();
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -98,15 +90,15 @@ impl OpenFile {
         }
     }
 
-	pub fn new_pipe() -> Self {
+    pub fn new_pipe() -> Self {
         Self {
             offset: 0,
             status_flags: 0,
             inode: Arc::new(Mutex::new(PipeINode::new_pipe())),
         }
     }
-
 }
+#[derive(Default)]
 pub struct GlobalOpenFileTable {
     table: Arc<Mutex<Vec<OpenFile>>>,
 }
@@ -119,7 +111,7 @@ impl GlobalOpenFileTable {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct GlobalBufferList {
     list: Arc<Mutex<Vec<Arc<Mutex<Vec<u8>>>>>>,
 }
@@ -144,12 +136,12 @@ impl GlobalBufferList {
 }
 #[derive(Clone)]
 pub struct FileDescriptor {
-    pub open_file: Arc<Mutex<OpenFile> >,
+    pub open_file: Arc<Mutex<OpenFile>>,
     pub readable: bool,
     pub writable: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct FdManager {
     pub fd_array: Vec<FileDescriptor>,
 }
@@ -217,10 +209,12 @@ impl FdManager {
         self.fd_array.len() - 1
     }
 }
+#[derive(Default)]
 pub struct GlobalInodeTable {
     pub table: Arc<Mutex<Vec<Arc<Mutex<dyn INode>>>>>,
 }
 
+#[derive(Default)]
 pub struct GlobalDentryCache {
     pub table: Arc<Mutex<HashMap<String, Arc<Mutex<dyn INode>>>>>,
 }
