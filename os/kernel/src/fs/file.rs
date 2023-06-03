@@ -152,7 +152,7 @@ impl INode for RegFileINode {
         let len = buf.len();
         let mut pos = 0;
         while pos < len {
-			if pos+offset>file.len()  {
+			if pos+offset>=file.len()  {
 				file.push(buf[pos]);
 			}
 			else {
