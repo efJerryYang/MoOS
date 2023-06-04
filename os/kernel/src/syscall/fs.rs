@@ -762,7 +762,7 @@ pub fn sys_unlinkat(fd: isize, path: &str, flags: usize) -> isize {
 
 pub fn sys_pipe2(pipe: *mut u32) -> isize {
     let task = myproc();
-    let mut fd_manager = &mut task.fd_manager;
+    let fd_manager = &mut task.fd_manager;
 
     let read_fd = fd_manager.alloc_fd(true, false);
     let write_fd = fd_manager.alloc_fd(false, true);
@@ -770,19 +770,9 @@ pub fn sys_pipe2(pipe: *mut u32) -> isize {
     fd_manager.fd_array[read_fd].open_file = Arc::new(Mutex::new(OpenFile::new_pipe()));
     fd_manager.fd_array[write_fd].open_file = fd_manager.fd_array[read_fd].open_file.clone();
 
-    // println!("fd_manager.len(): {}", fd_manager.len());
-
-    // pipe[0] = read_fd;
-    // pipe[1] = write_fd;
     unsafe {
         *pipe = read_fd as u32;
         *pipe.add(1) = write_fd as u32;
     }
-    // println!("pipe2: read_fd: {}, write_fd: {}", read_fd, write_fd);
-
-    // test string as below
-    // println!("cpid: 0");
-    // println!("cpid: 1");
-    // println!("  Write to pipe successfully.");
     0
 }
