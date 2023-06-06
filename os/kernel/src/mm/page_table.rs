@@ -1,6 +1,6 @@
 //! Implementation of [`PageTableEntry`] and [`PageTable`].
 
-use super::{frame_alloc, FrameTracker, PhysPageNum, StepByOne, VirtAddr, VirtPageNum, PhysAddr};
+use super::{frame_alloc, FrameTracker, PhysAddr, PhysPageNum, StepByOne, VirtAddr, VirtPageNum};
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -129,7 +129,7 @@ impl PageTable {
     pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
         self.find_pte(vpn).map(|pte| *pte)
     }
-	pub fn translate_va(&self, va: VirtAddr) -> Option<PhysAddr> {
+    pub fn translate_va(&self, va: VirtAddr) -> Option<PhysAddr> {
         self.find_pte(va.clone().floor()).map(|pte| {
             //println!("translate_va:va = {:?}", va);
             let aligned_pa: PhysAddr = pte.ppn().into();
@@ -167,7 +167,7 @@ pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&
     v
 }
 
-pub fn copy_out(token: usize, ptr: *const u8, src:* const u8, len: usize) -> () {
+pub fn copy_out(token: usize, ptr: *const u8, src: *const u8, len: usize) -> () {
     let page_table = PageTable::from_token(token);
     let mut start = ptr as usize;
     let mut start_src = src as usize;
@@ -180,15 +180,19 @@ pub fn copy_out(token: usize, ptr: *const u8, src:* const u8, len: usize) -> () 
         let mut end_va: VirtAddr = vpn.into();
         end_va = end_va.min(VirtAddr::from(end));
         if end_va.page_offset() == 0 {
-			let x=&mut ppn.get_bytes_array()[start_va.page_offset()..];
-			unsafe{x.copy_from_slice(core::slice::from_raw_parts(start_src as *mut u8,x.len()));}
+            let x = &mut ppn.get_bytes_array()[start_va.page_offset()..];
+            unsafe {
+                x.copy_from_slice(core::slice::from_raw_parts(start_src as *mut u8, x.len()));
+            }
         } else {
-			let x=&mut ppn.get_bytes_array()[start_va.page_offset()..end_va.page_offset()];
-			unsafe{x.copy_from_slice(core::slice::from_raw_parts(start_src as *mut u8,x.len()));}
+            let x = &mut ppn.get_bytes_array()[start_va.page_offset()..end_va.page_offset()];
+            unsafe {
+                x.copy_from_slice(core::slice::from_raw_parts(start_src as *mut u8, x.len()));
+            }
         }
-		let mut dlt:usize=end_va.into();
-		dlt-=start;
-		start_src+=dlt;
+        let mut dlt: usize = end_va.into();
+        dlt -= start;
+        start_src += dlt;
         start = end_va.into();
     }
 }
@@ -198,7 +202,10 @@ pub fn translate_str(token: usize, ptr: *const u8) -> String {
     let mut string = String::new();
     let mut va = ptr as usize;
     loop {
-        let ch: u8 = *(page_table.translate_va(VirtAddr::from(va)).unwrap().get_mut());
+        let ch: u8 = *(page_table
+            .translate_va(VirtAddr::from(va))
+            .unwrap()
+            .get_mut());
         if ch == 0 {
             break;
         } else {

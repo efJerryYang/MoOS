@@ -9,10 +9,10 @@ use crate::sync::UPSafeCell;
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use xmas_elf::ElfFile;
 use core::arch::asm;
 use lazy_static::*;
 use riscv::register::satp;
+use xmas_elf::ElfFile;
 
 extern "C" {
     fn stext();
@@ -155,7 +155,7 @@ impl MemorySet {
     }
     /// Include sections in elf and trampoline and TrapFrame and user stack,
     /// also returns user_sp and entry point.
-    pub fn from_elf(elf:&ElfFile) -> (Self, usize, usize) {
+    pub fn from_elf(elf: &ElfFile) -> (Self, usize, usize) {
         let mut memory_set = Self::new_bare();
         // map trampoline
         memory_set.map_trampoline();
@@ -266,7 +266,7 @@ impl MemorySet {
             false
         }
     }
-	pub fn from_existed_user(user_space: &MemorySet) -> MemorySet {
+    pub fn from_existed_user(user_space: &MemorySet) -> MemorySet {
         let mut memory_set = Self::new_bare();
         // map trampoline
         memory_set.map_trampoline();
@@ -278,13 +278,20 @@ impl MemorySet {
             for vpn in area.vpn_range {
                 let src_ppn = user_space.translate(vpn).unwrap().ppn();
                 let dst_ppn = memory_set.translate(vpn).unwrap().ppn();
-                dst_ppn.get_bytes_array().copy_from_slice(src_ppn.get_bytes_array());
+                dst_ppn
+                    .get_bytes_array()
+                    .copy_from_slice(src_ppn.get_bytes_array());
             }
         }
         memory_set
     }
-    pub fn get_areas_end(&self) -> VirtPageNum{
-        return self.areas.get(self.areas.len() - 2).unwrap().vpn_range.get_end();
+    pub fn get_areas_end(&self) -> VirtPageNum {
+        return self
+            .areas
+            .get(self.areas.len() - 2)
+            .unwrap()
+            .vpn_range
+            .get_end();
     }
 }
 
@@ -381,12 +388,9 @@ impl MapArea {
             current_vpn.step();
         }
     }
-	pub fn from_another(another: &MapArea) -> Self {
+    pub fn from_another(another: &MapArea) -> Self {
         Self {
-            vpn_range: VPNRange::new(
-                another.vpn_range.get_start(),
-                another.vpn_range.get_end()
-            ),
+            vpn_range: VPNRange::new(another.vpn_range.get_start(), another.vpn_range.get_end()),
             data_frames: BTreeMap::new(),
             map_type: another.map_type,
             map_perm: another.map_perm,

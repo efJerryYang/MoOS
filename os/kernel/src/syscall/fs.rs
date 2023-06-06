@@ -1,11 +1,13 @@
 //! File and filesystem-related syscalls
 
 use core::{
+    fmt::write,
     mem::{align_of, size_of},
-    ops::Add, slice, fmt::write,
+    ops::Add,
+    slice,
 };
 
-use crate::{syscall::sys_yield, mm::page_table::copy_out, console::print};
+use crate::{console::print, mm::page_table::copy_out, syscall::sys_yield};
 use alloc::{
     format,
     string::{String, ToString},
@@ -86,7 +88,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
     // ); // TODO: fix incorrect start_dir_path
     let abs_path = format!("{}{}", start_dir_path, rel_path);
     let fd;
-	// println!("!!!{}",abs_path);
+    // println!("!!!{}",abs_path);
     let inode = match global_dentry_cache.get(&abs_path) {
         Some(inode) => {
             if &inode.lock().file_name() == "null" {
@@ -122,7 +124,7 @@ pub fn sys_openat(dirfd: isize, path: &str, flags: isize) -> isize {
             for (i, fd_ref) in fd_manager.fd_array.iter().enumerate() {
                 if Arc::ptr_eq(&fd_ref.open_file.lock().inode, &inode) {
                     fd_manager.fd_array[i] = file_descriptor;
-					// println!("!!!{}",233);
+                    // println!("!!!{}",233);
                     return i as isize;
                 }
             }
@@ -184,21 +186,25 @@ pub fn sys_close(fd: isize) -> isize {
 
 /// write buf of length `len`  to a file with `fd`
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
-	let task = myproc();
-	let fd_manager = &mut task.fd_manager;
-	let fde=&fd_manager.fd_array[fd];
-	if(!fde.writable){
-		return -1;
-	}
-	let buffers = translated_byte_buffer(myproc().memory_set.token(),buf,len);
-	let mut sum=0;
-	for buffer in buffers{
-		let mut open_file=fde.open_file.lock();
-		let write_in=open_file.inode.lock().write_at(open_file.offset,buffer).unwrap();
-		open_file.offset+=write_in;
-		sum+=write_in;
-	}
-	return sum as isize;
+    let task = myproc();
+    let fd_manager = &mut task.fd_manager;
+    let fde = &fd_manager.fd_array[fd];
+    if (!fde.writable) {
+        return -1;
+    }
+    let buffers = translated_byte_buffer(myproc().memory_set.token(), buf, len);
+    let mut sum = 0;
+    for buffer in buffers {
+        let mut open_file = fde.open_file.lock();
+        let write_in = open_file
+            .inode
+            .lock()
+            .write_at(open_file.offset, buffer)
+            .unwrap();
+        open_file.offset += write_in;
+        sum += write_in;
+    }
+    return sum as isize;
 
     // match fd {
     //     FD_STDOUT => {
@@ -299,28 +305,32 @@ pub unsafe fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
     // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
     let task = myproc();
     let fd_manager = &mut task.fd_manager;
-	let fde=&fd_manager.fd_array[fd];
-	if !fde.readable {
-		return -1;
-	}
-	// println!("[read] len={},fd={}",len,fd);
-	let buffers = translated_byte_buffer(myproc().memory_set.token(),buf,len);
-	let mut sum=0;
-	for buffer in buffers{
-		for i in 0..10{
-			let mut open_file=fde.open_file.lock();
-			let read_in=open_file.inode.lock().read_at(open_file.offset,buffer).unwrap();
-			open_file.offset+=read_in;
-			sum+=read_in;
-			if(read_in>0){
-				break;
-			}else{
-				drop(open_file);
-				sys_yield();
-			}
-		}
-	}
-	return sum as isize;
+    let fde = &fd_manager.fd_array[fd];
+    if !fde.readable {
+        return -1;
+    }
+    // println!("[read] len={},fd={}",len,fd);
+    let buffers = translated_byte_buffer(myproc().memory_set.token(), buf, len);
+    let mut sum = 0;
+    for buffer in buffers {
+        for i in 0..10 {
+            let mut open_file = fde.open_file.lock();
+            let read_in = open_file
+                .inode
+                .lock()
+                .read_at(open_file.offset, buffer)
+                .unwrap();
+            open_file.offset += read_in;
+            sum += read_in;
+            if (read_in > 0) {
+                break;
+            } else {
+                drop(open_file);
+                sys_yield();
+            }
+        }
+    }
+    return sum as isize;
 
     // // println!("fd_manager.len() = {}", fd_manager.len());
     // // println!("fd: {}", fd);&
@@ -338,7 +348,7 @@ pub unsafe fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
     //         return 0;
     //     }
     //     other => {
-	// 		return -1;
+    // 		return -1;
     //         // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
     //         if other >= fd_manager.len() {
     //             return 0;
@@ -676,7 +686,7 @@ pub fn sys_chdir(path: &str) -> isize {
 // SYSCALL_FSSTAT => sys_fstat(args[0] as isize, args[1] as *mut u8),
 
 pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
-	let fd = fd as usize;
+    let fd = fd as usize;
     let task = myproc();
     let fd_manager = &mut task.fd_manager;
 
@@ -690,16 +700,26 @@ pub fn sys_fstat(fd: isize, buf: *mut u8) -> isize {
     }
     let mut stat = Stat::new();
 
-	stat.st_size=fd_manager.fd_array[fd].open_file.lock().inode.lock().file_size() as u32;
-	// println!("file_data:{:?}",fd_manager.fd_array[fd].open_file.inode.lock().file_data());
-	// println!("file_sss:{:?}",fd_manager.fd_array[fd].open_file.inode.lock().file_size());
-	// println!("file_nuckear:{:?}",stat.st_size);
-	unsafe {
-		copy_out(myproc().memory_set.token(), buf, &mut stat as *mut Stat as *mut u8, size_of::<Stat>());
-		// *(buf as *mut Stat)=stat;
-		// println!("xxxxfile_nuckear:{:?}",(*(buf as *mut Stat)).st_size);
-	}
-	return 0;
+    stat.st_size = fd_manager.fd_array[fd]
+        .open_file
+        .lock()
+        .inode
+        .lock()
+        .file_size() as u32;
+    // println!("file_data:{:?}",fd_manager.fd_array[fd].open_file.inode.lock().file_data());
+    // println!("file_sss:{:?}",fd_manager.fd_array[fd].open_file.inode.lock().file_size());
+    // println!("file_nuckear:{:?}",stat.st_size);
+    unsafe {
+        copy_out(
+            myproc().memory_set.token(),
+            buf,
+            &mut stat as *mut Stat as *mut u8,
+            size_of::<Stat>(),
+        );
+        // *(buf as *mut Stat)=stat;
+        // println!("xxxxfile_nuckear:{:?}",(*(buf as *mut Stat)).st_size);
+    }
+    return 0;
 }
 
 /*

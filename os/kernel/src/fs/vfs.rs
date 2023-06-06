@@ -1,12 +1,12 @@
 use crate::fs::dev::DevError;
 use alloc::{boxed::Box, string::String, sync::Arc, vec::Vec};
-use spin::Mutex;
 use core::any::Any;
 use core::fmt;
 use core::future::Future;
 use core::pin::Pin;
 use core::result;
 use core::str;
+use spin::Mutex;
 
 /// Abstract file system object such as file or directory.
 pub trait INode: Any + Sync + Send {
@@ -79,7 +79,12 @@ pub trait INode: Any + Sync + Send {
 
     /// Move INode `self/old_name` to `target/new_name`.
     /// If `target` equals `self`, do rename.
-    fn move_(&self, _old_name: &str, _target: &Arc<Mutex<dyn INode>>, _new_name: &str) -> Result<()> {
+    fn move_(
+        &self,
+        _old_name: &str,
+        _target: &Arc<Mutex<dyn INode>>,
+        _new_name: &str,
+    ) -> Result<()> {
         Err(FsError::NotSupported)
     }
 
@@ -120,7 +125,7 @@ pub trait INode: Any + Sync + Send {
     /// This is used to implement dynamics cast.
     /// Simply return self in the implement of the function.
     fn as_any_ref(&self) -> &dyn Any;
-    
+
     /// Get the file size of the inode.
     fn file_size(&self) -> usize;
 

@@ -13,15 +13,15 @@ pub fn get_time() -> usize {
 }
 /// get current time in microseconds
 pub fn get_time_us() -> usize {
-	time::read() / (CLOCK_FREQ / USEC_PER_SEC)
+    time::read() / (CLOCK_FREQ / USEC_PER_SEC)
 }
 pub fn get_time_ms() -> usize {
-	time::read() / (CLOCK_FREQ / MSEC_PER_SEC)
+    time::read() / (CLOCK_FREQ / MSEC_PER_SEC)
 }
 pub fn get_time_s() -> usize {
-	time::read()/(CLOCK_FREQ)
+    time::read() / (CLOCK_FREQ)
 }
 /// set the next timer interrupt
 pub fn set_next_trigger() {
-    set_timer(get_time() + CLOCK_FREQ/1000*10);
+    set_timer(get_time() + CLOCK_FREQ / 1000 * 10);
 }

@@ -1,13 +1,15 @@
 use crate::{
     console::print,
     fs::vfs::{INode, Metadata, Result, Timespec},
-    sbi::console_getchar, syscall::process::sys_yield,
+    sbi::console_getchar,
+    syscall::process::sys_yield,
 };
 use _core::{any::Any, cmp::min};
 use alloc::{
+    collections::VecDeque,
     string::{String, ToString},
     sync::Arc,
-    vec::Vec, collections::VecDeque,
+    vec::Vec,
 };
 use spin::Mutex;
 pub struct File {
@@ -138,7 +140,7 @@ impl INode for RegFileINode {
                 pos += 1;
             } else {
                 // buffer overflow
-				println!("[Reg Read] buffer overflow.");
+                println!("[Reg Read] buffer overflow.");
                 return Ok(pos);
             }
         }
@@ -152,12 +154,11 @@ impl INode for RegFileINode {
         let len = buf.len();
         let mut pos = 0;
         while pos < len {
-			if pos+offset>=file.len()  {
-				file.push(buf[pos]);
-			}
-			else {
-				file[pos+offset]=buf[pos];
-			}
+            if pos + offset >= file.len() {
+                file.push(buf[pos]);
+            } else {
+                file[pos + offset] = buf[pos];
+            }
             pos += 1;
         }
         return Ok(pos);
@@ -219,13 +220,13 @@ impl TerminalINode {
 }
 // terminal read
 pub fn terminal_read(buf: &mut [u8]) -> Result<usize> {
-	buf[0]=console_getchar() as u8;
-	Ok(1)
+    buf[0] = console_getchar() as u8;
+    Ok(1)
 }
 
 // terminal write
 pub fn terminal_write(buf: &[u8]) -> Result<usize> {
-	print!("{}",core::str::from_utf8(buf).unwrap());
+    print!("{}", core::str::from_utf8(buf).unwrap());
     Ok(buf.len())
 }
 
@@ -241,10 +242,10 @@ impl INode for TerminalINode {
     }
 
     fn write_at(&mut self, _offset: usize, buf: &[u8]) -> Result<usize> {
-		if !self.writable {
-			return Err(FsError::InvalidParam);
+        if !self.writable {
+            return Err(FsError::InvalidParam);
         }
-		
+
         let len = terminal_write(buf)?;
 
         Ok(len)
@@ -298,7 +299,7 @@ impl Dirent {
     }
 }
 
-#[derive(Debug,Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct Stat {
     pub st_dev: u64,
@@ -349,40 +350,40 @@ impl Stat {
 }
 
 pub struct PipeINode {
-	pub st: usize,
-	pub buf: Vec<u8>,
+    pub st: usize,
+    pub buf: Vec<u8>,
 }
 
 impl PipeINode {
     pub fn new_pipe() -> Self {
         Self {
-			st:0,
-			buf:Vec::new(),
+            st: 0,
+            buf: Vec::new(),
         }
     }
 }
 
 impl INode for PipeINode {
     fn read_at(&mut self, _offset: usize, buf: &mut [u8]) -> Result<usize> {
-		// println!("this read");
-		let pipe_buf: &Vec<u8>=&self.buf;
-		let size: usize=min(pipe_buf.len()-self.st,buf.len());
-		for i in 0..size{
-			buf[i]=pipe_buf[i+self.st];
-		}
-		// println!("[{}]",core::str::from_utf8(pipe_buf).unwrap());
-		self.st+=size;
-		Ok(size)
+        // println!("this read");
+        let pipe_buf: &Vec<u8> = &self.buf;
+        let size: usize = min(pipe_buf.len() - self.st, buf.len());
+        for i in 0..size {
+            buf[i] = pipe_buf[i + self.st];
+        }
+        // println!("[{}]",core::str::from_utf8(pipe_buf).unwrap());
+        self.st += size;
+        Ok(size)
     }
-	
+
     fn write_at(&mut self, _offset: usize, buf: &[u8]) -> Result<usize> {
-		// println!("this write");
-		let pipe_buf=&mut self.buf;
-		let size=buf.len();
-		for i in 0..size{
-			pipe_buf.push(buf[i]);
-		}
-		Ok(size)
+        // println!("this write");
+        let pipe_buf = &mut self.buf;
+        let size = buf.len();
+        for i in 0..size {
+            pipe_buf.push(buf[i]);
+        }
+        Ok(size)
     }
 
     // Implement other required INode methods as needed or with default behavior.
@@ -401,8 +402,8 @@ impl INode for PipeINode {
     }
 
     fn file_data(&mut self) -> &mut Vec<u8> {
-		return &mut self.buf;
-		// return 0;
+        return &mut self.buf;
+        // return 0;
     }
     fn file_name(&self) -> String {
         return "null".to_string();

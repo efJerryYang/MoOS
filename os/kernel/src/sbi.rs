@@ -1,6 +1,5 @@
 use core::arch::asm;
 
-
 const SBI_SET_TIMER: usize = 0;
 const SBI_CONSOLE_PUTCHAR: usize = 1;
 const SBI_CONSOLE_GETCHAR: usize = 2;
@@ -30,7 +29,7 @@ pub fn console_putchar(c: usize) {
     sbi_call(SBI_CONSOLE_PUTCHAR, c, 0, 0);
 }
 
-pub fn console_getchar() -> usize{
+pub fn console_getchar() -> usize {
     return sbi_call(SBI_CONSOLE_GETCHAR, 0, 0, 0);
 }
 
@@ -40,5 +39,5 @@ pub fn shutdown() -> ! {
 }
 
 pub fn set_timer(timer: usize) {
-	sbi_call(SBI_SET_TIMER, timer,0 , 0);
+    sbi_call(SBI_SET_TIMER, timer, 0, 0);
 }
