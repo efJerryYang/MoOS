@@ -1,11 +1,11 @@
-bootloader/rustsbi-qemu.bin:Zone.Identifier
 os/kernel/target
 os/kernel/debug
 os/user_c/build
-.vscode
+.vscode/
 testsuits-for-oskernel
 kernel-qemu
 sbi-qemu
 makefile_stdout_stderr.txt
 os_serial_out.txt
 result.txt
+**/userbin_gen
