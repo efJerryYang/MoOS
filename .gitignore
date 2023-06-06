@@ -1,3 +1,4 @@
+bootloader/rustsbi-qemu.bin:Zone.Identifier
 os/kernel/target
 os/kernel/debug
 os/user_c/build
