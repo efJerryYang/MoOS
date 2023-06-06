@@ -184,12 +184,12 @@ pub fn sys_close(fd: isize) -> isize {
     0
 }
 
-/// write buf of length `len`  to a file with `fd`
+/// write `buf` of length `len`  to a file with `fd`
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let task = myproc();
     let fd_manager = &mut task.fd_manager;
     let fde = &fd_manager.fd_array[fd];
-    if (!fde.writable) {
+    if !fde.writable {
         return -1;
     }
     let buffers = translated_byte_buffer(myproc().memory_set.token(), buf, len);
@@ -322,7 +322,7 @@ pub unsafe fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
                 .unwrap();
             open_file.offset += read_in;
             sum += read_in;
-            if (read_in > 0) {
+            if read_in > 0 {
                 break;
             } else {
                 drop(open_file);

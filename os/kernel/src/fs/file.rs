@@ -187,6 +187,7 @@ impl INode for RegFileINode {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TerminalINode {
     pub readable: bool,
     pub writable: bool,
@@ -279,12 +280,11 @@ impl INode for TerminalINode {
 
 #[repr(C)]
 pub struct Dirent {
-    pub d_ino: u64,    // 索引结点号
-    pub d_off: i64,    // 到下一个dirent的偏移
-    pub d_reclen: u16, // 当前dirent的长度
-    pub d_type: u8,    // 文件类型
-    // d_name: char[]; // 文件名, 该字段不包含在结构体中，因为它是一个不定长数组
-    pub d_name: [u8; 256],
+    pub d_ino: u64,        // 索引结点号
+    pub d_off: i64,        // 到下一个dirent的偏移
+    pub d_reclen: u16,     // 当前dirent的长度
+    pub d_type: u8,        // 文件类型
+    pub d_name: [u8; 256], // 文件名
 }
 
 impl Dirent {
@@ -349,6 +349,7 @@ impl Stat {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PipeINode {
     pub st: usize,
     pub buf: Vec<u8>,
