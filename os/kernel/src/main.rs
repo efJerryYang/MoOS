@@ -2,12 +2,17 @@
 #![no_main]
 #![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
+#![allow(unused)]
 
 extern crate alloc;
 
+use alloc::collections::VecDeque;
+use async_task::Runnable;
 use lazy_static::lazy_static;
+use spin::Mutex;
 use spin::mutex::SpinMutex;
 use sync::UPSafeCell;
+use xmas_elf::header::sanity_check;
 
 #[path = "boards/qemu.rs"]
 mod board;
@@ -40,6 +45,9 @@ use crate::{
 };
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use config::TRAPFRAME;
+use core::future::Future;
+use core::pin::Pin;
+use core::task::{Context, Poll};
 use core::{
     arch::asm,
     arch::global_asm,
@@ -114,24 +122,82 @@ unsafe fn load_user_file() {
 
 static LOCK: AtomicU8 = AtomicU8::new(0);
 
+
+async fn say_world() -> usize {
+    println!("hello world");
+	return 233;
+}
+
+struct Test{
+
+}
+
+impl Future for Test{
+	type Output = usize;
+	fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
+		println!("hello");
+		_cx.waker().wake_by_ref();
+		Poll::Pending
+	}
+}
+
+struct TaskQueue{
+	qs:Arc<Mutex<VecDeque<Runnable>>>
+}
+
+impl TaskQueue{
+	pub fn new()-> Self{
+		Self{
+			qs:Arc::new(Mutex::new(VecDeque::new()))
+		}
+	}
+	pub fn push(&self,runnable:Runnable){
+		self.qs.lock().push_back(runnable);
+	}
+	pub fn fetch(&self)->Runnable{
+		self.qs.lock().pop_front().unwrap()
+	}
+}
+
+lazy_static!{
+	static ref TASK_QUEUE:TaskQueue=TaskQueue::new();
+}
+
+fn async_test()-> !{
+	println!("Hello async!");
+
+	let scheduler = |runnable|{println!("pushing.");TASK_QUEUE.push(runnable);println!("push done.");};
+	let (r,t)= async_task::spawn(Test{}, scheduler);
+	let waker=r.waker();
+	r.schedule();
+	for i in 0..10{
+		let x=TASK_QUEUE.fetch();
+		x.run();
+	}
+	println!("entering loop.");
+	loop{}
+	
+}
+
 #[no_mangle]
 pub fn rust_main() -> ! {
     clear_bss();
     while (!LOCK
         .compare_exchange(0, 1, Ordering::SeqCst, Ordering::SeqCst)
         .is_ok())
-    {}
-    // println!("-----------NAIVE-OS-----------");
-    println!("");
-    println!("     _   _           ____   ______");
-    println!("    / | / |        / __  \\/ _____/");
-    println!("   /  |/  | ____  / /  / / /__");
-    println!("  / /| /| |/ __ \\/ /  / /\\___ \\");
-    println!(" / / |/ | / /_/ / /__/ /____/ /");
-    println!("/_/     |_\\____/\\_____/______/");
+		{}
+		// println!("-----------NAIVE-OS-----------");
+		println!("");
+		println!("     _   _           ____   ______");
+		println!("    / | / |        / __  \\/ _____/");
+		println!("   /  |/  | ____  / /  / / /__");
+		println!("  / /| /| |/ __ \\/ /  / /\\___ \\");
+		println!(" / / |/ | / /_/ / /__/ /____/ /");
+		println!("/_/     |_\\____/\\_____/______/");
     println!("");
     trap::init();
     mm::init();
+	async_test();
     // unsafe {sie::set_stimer();}
     // set_next_trigger();
     unsafe {
