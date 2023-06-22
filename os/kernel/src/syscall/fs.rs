@@ -185,14 +185,14 @@ pub fn sys_close(fd: isize) -> isize {
 }
 
 /// write `buf` of length `len`  to a file with `fd`
-pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
-    let task = myproc();
+pub fn sys_write(pid:usize, fd: usize, buf: *const u8, len: usize) -> isize {
+    let task = &mut task_list.exclusive_access()[pid];
     let fd_manager = &mut task.fd_manager;
     let fde = &fd_manager.fd_array[fd];
     if !fde.writable {
         return -1;
     }
-    let buffers = translated_byte_buffer(myproc().memory_set.token(), buf, len);
+    let buffers = translated_byte_buffer(task.memory_set.token(), buf, len);
     let mut sum = 0;
     for buffer in buffers {
         let mut open_file = fde.open_file.lock();

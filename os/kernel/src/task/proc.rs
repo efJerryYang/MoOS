@@ -1,4 +1,5 @@
 use alloc::{task, vec::Vec};
+use async_task::Runnable;
 use xmas_elf::ElfFile;
 
 use crate::{
@@ -10,16 +11,15 @@ use crate::{
         translated_byte_buffer, MemorySet, VirtAddr,
     },
     syscall::translate,
-    trap::{trap_handler, trap_return, TrapFrame},
+    trap::{ TrapFrame, user_loop},
 };
+use super::{cpu::mycpu, task_list, ProcessContext, ProcessState, __switch, PCB, TASK_QUEUE};
 
-use super::{cpu::mycpu, task_list, ProcessContext, ProcessState, __switch, PCB};
-
-pub unsafe fn clone(stack: usize) -> usize {
+pub unsafe fn clone(proc_idx:usize,stack: usize) -> usize {
     let tasks = task_list.exclusive_access();
     let pid = tasks.len();
     tasks.push(PCB::new());
-    let nowpid = mycpu().proc_idx;
+    let nowpid = proc_idx;
     tasks[pid].parent = nowpid;
     tasks[pid].fd_manager = tasks[nowpid].fd_manager.clone();
     // println!("tasks[pid].fd_manager.len(): {}",tasks[pid].fd_manager.len());
@@ -47,10 +47,15 @@ pub unsafe fn clone(stack: usize) -> usize {
     }
 
     tasks[pid].context = tasks[nowpid].context;
-    tasks[pid].context.ra = trap_return as usize;
+    tasks[pid].context.ra = user_loop as usize;
     tasks[pid].context.sp = TRAMPOLINE - KERNEL_STACK_SIZE * pid;
     tasks[pid].state = ProcessState::READY;
     tasks[pid].pid = pid;
+
+	let (r,t)=async_task::spawn(user_loop(pid), |runnable|{TASK_QUEUE.push(runnable);});
+	r.schedule();
+	t.detach();
+	println!("HH:{}",TASK_QUEUE.len());
     return pid;
 }
 
@@ -106,7 +111,7 @@ pub unsafe fn exec_from_elf(elf_file: &ElfFile, argv: usize) -> isize {
         user_stack,
         KERNEL_SPACE.exclusive_access().token(),
         TRAMPOLINE - KERNEL_STACK_SIZE * nowpid,
-        trap_handler as usize,
+        0 as usize,
     );
     nowproc.memory_set = user_pagetable;
     0

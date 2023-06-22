@@ -1,6 +1,6 @@
 //! App management syscalls
 
-use core::clone;
+use core::{clone, future::Future, pin::Pin, task::{Context, Poll}};
 
 use alloc::{
     boxed::Box,
@@ -25,8 +25,10 @@ use crate::{
     },
 };
 
+use super::raw_ptr::{UserPtr, Out};
+
 /// task exits and submit an exit code
-pub unsafe fn sys_exit(exit_code: i32) -> ! {
+pub unsafe fn sys_exit(exit_code: i32)->isize{
     let proc = &mut task_list.exclusive_access()[mycpu().proc_idx];
     proc.state = ProcessState::ZOMBIE;
     proc.exit_code = exit_code as isize;
@@ -35,21 +37,20 @@ pub unsafe fn sys_exit(exit_code: i32) -> ! {
             child.parent = 0;
         }
     }
+	0
     // println!("[kernel] process {} exited with code {}",mycpu().proc_idx, exit_code);
-    sched();
-    println!("exit unreachable part.");
-    loop {}
+    // sched();
 }
 
-pub unsafe fn sys_getpid() -> isize {
-    mycpu().proc_idx as isize
+pub unsafe fn sys_getpid(proc_idx:usize) -> isize {
+    proc_idx as isize
 }
 pub unsafe fn sys_getppid() -> isize {
     task_list.exclusive_access()[mycpu().proc_idx].parent as isize
 }
 
-pub unsafe fn sys_clone(stack: usize) -> isize {
-    return clone(stack) as isize;
+pub unsafe fn sys_clone(pid:usize,stack: usize) -> isize {
+    return clone(pid,stack) as isize;
 }
 
 lazy_static! {
@@ -125,7 +126,28 @@ pub unsafe fn sys_yield() -> isize {
     0
 }
 
-pub unsafe fn sys_waitpid(pid: isize, status: *mut isize, options: usize) -> isize {
+struct YieldFuture(bool);
+
+impl Future for YieldFuture {
+    type Output = ();
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        if self.0 {
+            return Poll::Ready(());
+        }
+        self.0 = true;
+        cx.waker().wake_by_ref();
+        Poll::Pending
+    }
+}
+
+
+pub async fn async_yield(){
+	YieldFuture(false).await
+}
+
+pub async unsafe fn sys_waitpid(pid: isize, status:UserPtr<isize,Out>, options: usize) -> isize {
+	
     let nowpid = mycpu().proc_idx;
     if (pid == -1) {
         loop {
@@ -137,9 +159,10 @@ pub unsafe fn sys_waitpid(pid: isize, status: *mut isize, options: usize) -> isi
                 }
             }
             if (p == 0xffffffff) {
-                sys_yield();
+				async_yield().await;
             } else {
-                if (status as usize != 0) {
+                if (status.as_usize() as usize != 0) {
+					let status=status.raw_ptr_mut();
                     *status = (task_list.exclusive_access()[p].exit_code << 8) | (0);
                 }
                 task_list.exclusive_access()[p].state = ProcessState::KILLED;
@@ -153,9 +176,11 @@ pub unsafe fn sys_waitpid(pid: isize, status: *mut isize, options: usize) -> isi
             return -1;
         } else {
             while (x.state != ProcessState::ZOMBIE) {
-                sys_yield();
+				async_yield().await;
+                // sys_yield();
             }
-            if (status as usize != 0) {
+            if (status.as_usize() as usize != 0) {
+				let status=status.raw_ptr_mut();
                 *status = (x.exit_code << 8) | (0);
             }
             x.state = ProcessState::KILLED;

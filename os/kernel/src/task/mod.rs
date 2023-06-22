@@ -5,7 +5,8 @@ use crate::{
     },
     mm::{PhysAddr, VirtAddr},
 };
-use alloc::string::{String, ToString};
+use alloc::{string::{String, ToString}, collections::VecDeque};
+use async_task::Runnable;
 pub use context::ProcessContext;
 use core::arch::global_asm;
 use core::default::Default;
@@ -34,6 +35,31 @@ lazy_static! {
     pub static ref global_inode_table: GlobalInodeTable = Default::default();
     pub static ref global_open_file_table: GlobalOpenFileTable = Default::default();
     pub static ref global_buffer_list: GlobalBufferList = Default::default();
+}
+
+pub struct TaskQueue{
+	qs:Arc<Mutex<VecDeque<Runnable>>>
+}
+
+impl TaskQueue{
+	pub fn new()-> Self{
+		Self{
+			qs:Arc::new(Mutex::new(VecDeque::new()))
+		}
+	}
+	pub fn push(&self,runnable:Runnable){
+		self.qs.lock().push_back(runnable);
+	}
+	pub fn len(&self)->usize{
+		self.qs.lock().len()
+	}
+	pub fn fetch(&self)->Runnable{
+		self.qs.lock().pop_front().unwrap()
+	}
+}
+
+lazy_static!{
+	pub static ref TASK_QUEUE:TaskQueue=TaskQueue::new();
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]

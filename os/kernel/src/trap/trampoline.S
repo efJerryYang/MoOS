@@ -41,17 +41,55 @@ __alltraps:
     csrw satp, t0
     sfence.vma
     # jump to trap_handler
-    jr t1
+
+	ld ra, 0(t1)
+	ld sp, 8(t1)
+	ld s0, 16(t1)
+	ld s1, 24(t1)
+	ld s2, 32(t1)
+	ld s3, 40(t1)
+	ld s4, 48(t1)
+	ld s5, 56(t1)
+	ld s6, 64(t1)
+	ld s7, 72(t1)
+	ld s8, 80(t1)
+	ld s9, 88(t1)
+	ld s10, 96(t1)
+	ld s11, 104(t1)
+	ret
 
 __restore:
     # a0: *TrapFrame in user space(Constant); a1: user space token
     # switch to user space
+	sd ra, 0(a0)
+	sd sp, 8(a0)
+	sd s0, 16(a0)
+	sd s1, 24(a0)
+	sd s2, 32(a0)
+	sd s3, 40(a0)
+	sd s4, 48(a0)
+	sd s5, 56(a0)
+	sd s6, 64(a0)
+	sd s7, 72(a0)
+	sd s8, 80(a0)
+	sd s9, 88(a0)
+	sd s10, 96(a0)
+	sd s11, 104(a0)
+
     csrw satp, a1
+	mv a1,a0
+
+	li a0,0xFFFFFFFFFFFFE000
+
     sfence.vma
     csrw sscratch, a0
     mv sp, a0
     # now sp points to TrapFrame in user space, start restoring based on it
     # restore sstatus/sepc
+
+	sd a1, 36*8(sp)#save &cx to trap_handler
+	csrr a1,satp
+
     ld t0, 32*8(sp)
     ld t1, 33*8(sp)
     csrw sstatus, t0

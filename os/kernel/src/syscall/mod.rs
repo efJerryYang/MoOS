@@ -44,18 +44,20 @@ pub mod fs;
 pub mod interrupt;
 pub mod mm;
 pub mod process;
+pub mod raw_ptr;
 
 use fs::*;
 use interrupt::*;
 use mm::*;
 use process::*;
+use raw_ptr::*;
 
 use crate::{
     mm::{
         page_table::{translate_str, PageTable},
         VirtAddr,
     },
-    task::{cpu::mycpu, myproc, task_list},
+    task::{cpu::mycpu, myproc, task_list, PCB, proc},
 };
 
 #[repr(C)]
@@ -72,10 +74,14 @@ pub fn translate(ptr: usize) -> usize {
 }
 
 /// handle syscall exception with `syscall_id` and other arguments
-pub unsafe fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
-    match syscall_id {
-        SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
-        SYSCALL_EXIT => sys_exit(args[0] as i32),
+pub async unsafe fn syscall(proc_idx:usize, syscall_id: usize, args: [usize; 6]) -> isize {
+	// println!("syscall:{}",syscall_id);
+    let result = match syscall_id {
+        SYSCALL_WRITE => sys_write(proc_idx,args[0], args[1] as *const u8, args[2]),
+        SYSCALL_EXIT => {
+			sys_exit(args[0] as i32);
+			-1
+		},
         SYSCALL_NANOSLEEP => sys_nanosleep(
             translate(args[0]) as *mut timespec,
             translate(args[1]) as *mut timespec,
@@ -83,19 +89,19 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         SYSCALL_READ => sys_read(args[0] as usize, args[1] as *mut u8, args[2]),
         SYSCALL_SCHED_YIELD => sys_yield(),
         SYSCALL_GETTIMEOFDAY => sys_gettimeofday(args[0] as *mut usize),
-        SYSCALL_GETPID => sys_getpid(),
+        SYSCALL_GETPID => sys_getpid(proc_idx),
         SYSCALL_GETPPID => sys_getppid(),
-        SYSCALL_CLONE => sys_clone(args[1]),
+        SYSCALL_CLONE => sys_clone(proc_idx,args[1]),
         SYSCALL_EXECVE => sys_exec(args[0] as *mut u8, args[1] as usize),
         SYSCALL_WAITPID => sys_waitpid(
             args[0] as isize,
             if (args[1] == 0) {
-                0
+                UserPtr::<isize,Out>::from_usize(0)
             } else {
-                translate(args[1])
-            } as *mut isize,
+				UserPtr::<isize,Out>::from_usize(translate(args[1]))
+            } ,
             args[2],
-        ),
+        ).await,
         SYSCALL_TIMES => sys_times(translate(args[0])),
         SYSCALL_UMOUNT => sys_umount(),
         SYSCALL_MOUNT => sys_mount(),
@@ -141,7 +147,8 @@ pub unsafe fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
             sys_pipe2(translate(args[0]) as *mut u32)
         }
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
-    }
+    };
+	result
 }
 
 pub fn get_token() -> usize {

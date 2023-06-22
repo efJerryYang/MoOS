@@ -34,6 +34,8 @@ pub mod timer;
 pub mod trap;
 use crate::mm::memory_set::{MapArea, MapPermission, MapType};
 use crate::mm::VirtAddr;
+use crate::task::TASK_QUEUE;
+use crate::trap::user_loop;
 use crate::{
     config::{KERNEL_STACK_SIZE, TRAMPOLINE, USER_STACK_SIZE},
     console::print,
@@ -41,7 +43,6 @@ use crate::{
     sbi::{console_getchar, console_putchar, shutdown},
     task::{task_list, ProcessContext, PCB},
     timer::{get_time, set_next_trigger},
-    trap::{trap_handler, trap_return},
 };
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use config::TRAPFRAME;
@@ -77,7 +78,7 @@ unsafe fn crate_task_from_elf(userbin: &[u8]) {
     let inner = task_list.exclusive_access();
     let idx = inner.len();
     inner.push(PCB::new());
-    let task = &mut inner[idx];
+    let task: &mut PCB = &mut inner[idx];
 
     // let user_pagetable=&mut task.memory_set;
     let (user_pagetable, user_stack, entry) = MemorySet::from_elf(&elf_file);
@@ -94,90 +95,84 @@ unsafe fn crate_task_from_elf(userbin: &[u8]) {
         .ppn();
 
     task.memory_set = user_pagetable;
+
     *task.trapframe_ppn.get_mut() = TrapFrame::app_init_context(
         entry,
         user_stack - 8,
         KERNEL_SPACE.exclusive_access().token(),
         TRAMPOLINE - KERNEL_STACK_SIZE * idx,
-        trap_handler as usize,
+        0 as usize,
     );
     task.context.sp = TRAMPOLINE - KERNEL_STACK_SIZE * idx;
-    task.context.ra = trap_return as usize;
+    task.context.ra = 0 as usize;
+	
+	let (r,t)=async_task::spawn(user_loop(idx), |runnable|{TASK_QUEUE.push(runnable);});
+	r.schedule();
+	t.detach();
     drop(inner);
 }
+
 
 #[no_mangle]
 unsafe fn load_user_file() {
     extern "C" {
         fn init_start();
         fn init_end();
+		fn forktest_start();
+        fn forktest_end();
     }
-    crate_task_from_elf(slice::from_raw_parts(
-        init_start as *const u8,
-        init_end as usize - init_start as usize,
+    // crate_task_from_elf(slice::from_raw_parts(
+    //     init_start as *const u8,
+    //     init_end as usize - init_start as usize,
+    // ));
+	crate_task_from_elf(slice::from_raw_parts(
+        forktest_start as *const u8,
+        forktest_end as usize - init_start as usize,
     ));
     mycpu().proc_idx = 0;
+	for i in 0..10{
+		println!("len:{}",TASK_QUEUE.len());
+		let runnable: Runnable=TASK_QUEUE.fetch();
+		runnable.run();
+	}
     schedule();
 }
 
 static LOCK: AtomicU8 = AtomicU8::new(0);
-
 
 async fn say_world() -> usize {
     println!("hello world");
 	return 233;
 }
 
-struct Test{
+// struct Test{
 
-}
+// }
 
-impl Future for Test{
-	type Output = usize;
-	fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
-		println!("hello");
-		_cx.waker().wake_by_ref();
-		Poll::Pending
-	}
-}
+// impl Future for Test{
+// 	type Output = usize;
+// 	fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
+// 		println!("hello");
+// 		_cx.waker().wake_by_ref();
+// 		Poll::Pending
+// 	}
+// }
 
-struct TaskQueue{
-	qs:Arc<Mutex<VecDeque<Runnable>>>
-}
+// fn async_test()-> !{
+// 	println!("Hello async!");
 
-impl TaskQueue{
-	pub fn new()-> Self{
-		Self{
-			qs:Arc::new(Mutex::new(VecDeque::new()))
-		}
-	}
-	pub fn push(&self,runnable:Runnable){
-		self.qs.lock().push_back(runnable);
-	}
-	pub fn fetch(&self)->Runnable{
-		self.qs.lock().pop_front().unwrap()
-	}
-}
-
-lazy_static!{
-	static ref TASK_QUEUE:TaskQueue=TaskQueue::new();
-}
-
-fn async_test()-> !{
-	println!("Hello async!");
-
-	let scheduler = |runnable|{println!("pushing.");TASK_QUEUE.push(runnable);println!("push done.");};
-	let (r,t)= async_task::spawn(Test{}, scheduler);
-	let waker=r.waker();
-	r.schedule();
-	for i in 0..10{
-		let x=TASK_QUEUE.fetch();
-		x.run();
-	}
-	println!("entering loop.");
-	loop{}
+// 	let scheduler = |runnable|{println!("pushing.");TASK_QUEUE.push(runnable);println!("push done.");};
+// 	let (r,t)= async_task::spawn(Test{}, scheduler);
+// 	let waker=r.waker();
+// 	r.schedule();
+// 	for i in 0..10{
+// 		let x=TASK_QUEUE.fetch();
+// 		x.run();
+// 	}
+// 	println!("entering loop.");
+// 	loop{}
 	
-}
+// }
 
 #[no_mangle]
 pub fn rust_main() -> ! {
@@ -197,7 +192,6 @@ pub fn rust_main() -> ! {
     println!("");
     trap::init();
     mm::init();
-	async_test();
     // unsafe {sie::set_stimer();}
     // set_next_trigger();
     unsafe {
