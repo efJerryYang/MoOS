@@ -29,6 +29,8 @@ use crate::{
         task_list, FdManager, FileDescriptor, OpenFile,
     },
 };
+
+use super::process::async_yield;
 const FD_STDOUT: usize = 1;
 const FD_STDIN: usize = 0;
 
@@ -301,16 +303,16 @@ pub fn sys_mount() -> isize {
     0
 }
 
-pub unsafe fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
+pub async unsafe fn sys_read(pid:usize,fd: usize, buf: usize, len: usize) -> isize {
     // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
-    let task = myproc();
+    let task = &mut task_list.exclusive_access()[pid];
     let fd_manager = &mut task.fd_manager;
     let fde = &fd_manager.fd_array[fd];
     if !fde.readable {
         return -1;
     }
     // println!("[read] len={},fd={}",len,fd);
-    let buffers = translated_byte_buffer(myproc().memory_set.token(), buf, len);
+    let buffers = translated_byte_buffer(task.memory_set.token(), buf as *mut u8, len);
     let mut sum = 0;
     for buffer in buffers {
         for i in 0..10 {
@@ -326,121 +328,11 @@ pub unsafe fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
                 break;
             } else {
                 drop(open_file);
-                sys_yield();
+				async_yield().await;
             }
         }
     }
     return sum as isize;
-
-    // // println!("fd_manager.len() = {}", fd_manager.len());
-    // // println!("fd: {}", fd);&
-    // let fd = fd as usize;
-    // match fd {
-    //     FD_STDIN => {
-    //         let mut buffers = translated_byte_buffer(
-    //             task_list.exclusive_access()[mycpu().proc_idx]
-    //                 .memory_set
-    //                 .token(),
-    //             buf,
-    //             1,
-    //         );
-    //         buffers[0][0] = console_getchar() as u8;
-    //         return 0;
-    //     }
-    //     other => {
-    // 		return -1;
-    //         // println!("sys_read: fd: {}, buf: {:?}, len: {}", fd, buf, len);
-    //         if other >= fd_manager.len() {
-    //             return 0;
-    //         }
-    //         let file_descriptor = &fd_manager.fd_array[other];
-    //         // println!(
-    //         //     "file_descriptor = {}, {}, {}",
-    //         //     file_descriptor.readable,
-    //         //     file_descriptor.writable,
-    //         //     file_descriptor.open_file.inode.lock().file_size()
-    //         // );
-    //         // if !file_descriptor.readable {
-    //         //     return -1;
-    //         // }
-    //         // println!("[read] fs.rs:214 - sys_read: fd {}", fd);
-    //         let is_pipe = fd_manager.fd_array[fd].open_file.inode.lock().is_pipe();
-
-    //         let mut open_file = file_descriptor.open_file.clone();
-    //         if is_pipe {
-    //             let mut buffers = translated_byte_buffer(
-    //                 task_list.exclusive_access()[mycpu().proc_idx]
-    //                     .memory_set
-    //                     .token(),
-    //                 buf,
-    //                 len,
-    //             );
-    //             // println!("read from pipe");
-    //             // let data_len = open_file.inode.lock().file_data().len();
-    //             // print the content of pipe buf
-    //             let buf = open_file.inode.lock().file_data().clone();
-    //             // println!("buf: {:?}", buf);
-    //             for i in 0..len {
-    //                 let mut file_data = open_file.inode.lock().file_data().clone();
-    //                 let mut pos = open_file.inode.lock().get_pipe_read_pos();
-    //                 let mut byte = file_data.get(pos);
-    //                 while byte.is_none() {
-    //                     sys_yield();
-    //                     file_data = open_file.inode.lock().file_data().clone();
-    //                     pos = open_file.inode.lock().get_pipe_read_pos();
-    //                     byte = file_data.get(1 + pos);
-    //                 }
-    //                 let byte = match byte {
-    //                     Some(byte) => {
-    //                         // println!("sys_read: pipe is not empty");
-    //                         *byte
-    //                     }
-    //                     None => {
-    //                         // println!("sys_read: pipe is empty");
-    //                         0
-    //                     }
-    //                 };
-    //                 buffers[i][0] = byte;
-    //                 open_file.inode.lock().set_pipe_read_pos(pos + 1);
-    //                 if byte == 0 {
-    //                     return i as isize;
-    //                 }
-
-    //                 // println!("byte: {}", byte);
-    //             }
-    //             // for buffer in buffers {
-    //             //     for byte in buffer {
-    //             //         *byte = open_file.inode.lock().file_data().clone()[open_file.offset];
-    //             //     }
-    //             // }
-    //             // println!("fs.rs:214 - sys_read: fd {}", fd);
-    //             return len as isize;
-    //         }
-    //         let inode = open_file.inode.clone();
-    //         let mut read_bytes = 0;
-    //         let mut buf_iter = 0;
-
-    //         // if open_file.offset >= inode.file_size() as usize {
-    //         //     return 0;
-    //         // }
-    //         // println!("fs.rs:223 - sys_read: fd {}", fd);
-
-    //         let mut buffers = translated_byte_buffer(task.memory_set.token(), buf, len);
-    //         for buffer in buffers {
-    //             for byte in buffer {
-    //                 if open_file.offset + buf_iter < inode.lock().file_size() as usize {
-    //                     *byte = inode.lock().file_data().clone()[open_file.offset + buf_iter];
-    //                     buf_iter += 1;
-    //                     read_bytes += 1;
-    //                 } else {
-    //                     break;
-    //                 }
-    //             }
-    //         }
-    //         // println!("fs.rs:237 - sys_read: fd {}", fd);
-    //         read_bytes as isize
-    //     }
-    // }
 }
 
 // pub const SYS_GETDENTS64: usize = 61;

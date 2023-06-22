@@ -28,8 +28,8 @@ use crate::{
 use super::raw_ptr::{UserPtr, Out};
 
 /// task exits and submit an exit code
-pub unsafe fn sys_exit(exit_code: i32)->isize{
-    let proc = &mut task_list.exclusive_access()[mycpu().proc_idx];
+pub unsafe fn sys_exit(proc_idx:usize,exit_code: i32)->isize{
+    let proc = &mut task_list.exclusive_access()[proc_idx];
     proc.state = ProcessState::ZOMBIE;
     proc.exit_code = exit_code as isize;
     for child in task_list.exclusive_access() {
@@ -92,9 +92,9 @@ fn get_location(id: usize) -> (usize, usize) {
     }
 }
 
-pub unsafe fn sys_exec(buf: *mut u8, argv: usize) -> isize {
+pub unsafe fn sys_exec(proc_idx:usize,buf: *mut u8, argv: usize) -> isize {
     let path = translate_str(
-        task_list.exclusive_access()[mycpu().proc_idx]
+        task_list.exclusive_access()[proc_idx]
             .memory_set
             .token(),
         buf,
@@ -106,7 +106,7 @@ pub unsafe fn sys_exec(buf: *mut u8, argv: usize) -> isize {
     let range = ((0..num).find(|&i| APP_NAMES[i] == path).map(get_location));
     if (range == None) {
         println!("{} : not found.", path);
-        sys_exit(-1);
+        sys_exit(proc_idx,-1);
         return 1;
     }
 
@@ -115,7 +115,7 @@ pub unsafe fn sys_exec(buf: *mut u8, argv: usize) -> isize {
     let elf_file: Result<ElfFile, &str> =
         ElfFile::new(slice::from_raw_parts(start as *const u8, end - start));
     match elf_file {
-        Ok(elf) => exec_from_elf(&elf, argv),
+        Ok(elf) => exec_from_elf(proc_idx,&elf, argv),
         Err(e) => 1,
     }
 }
@@ -146,9 +146,9 @@ pub async fn async_yield(){
 	YieldFuture(false).await
 }
 
-pub async unsafe fn sys_waitpid(pid: isize, status:UserPtr<isize,Out>, options: usize) -> isize {
+pub async unsafe fn sys_waitpid(proc_idx:usize, pid: isize, status:UserPtr<isize,Out>, options: usize) -> isize {
 	
-    let nowpid = mycpu().proc_idx;
+    let nowpid = proc_idx;
     if (pid == -1) {
         loop {
             let mut p = 0xffffffff;

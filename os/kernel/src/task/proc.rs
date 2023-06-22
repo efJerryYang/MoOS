@@ -59,9 +59,8 @@ pub unsafe fn clone(proc_idx:usize,stack: usize) -> usize {
     return pid;
 }
 
-pub unsafe fn exec_from_elf(elf_file: &ElfFile, argv: usize) -> isize {
+pub unsafe fn exec_from_elf(nowpid:usize ,elf_file: &ElfFile, argv: usize) -> isize {
     let (user_pagetable, mut user_stack, entry) = MemorySet::from_elf(&elf_file);
-    let nowpid = mycpu().proc_idx;
     let mut nowproc = &mut task_list.exclusive_access()[nowpid];
     nowproc.trapframe_ppn = user_pagetable
         .translate(VirtAddr::from(TRAPFRAME).into())
@@ -78,7 +77,7 @@ pub unsafe fn exec_from_elf(elf_file: &ElfFile, argv: usize) -> isize {
     let mut pos: Vec<usize> = Vec::new();
     if (argv != 0) {
         loop {
-            let argv_i_ptr = *(translate(argv + argc * 8) as *mut usize);
+            let argv_i_ptr = *(translate(nowpid,argv + argc * 8) as *mut usize);
             if (argv_i_ptr == 0) {
                 break;
             }

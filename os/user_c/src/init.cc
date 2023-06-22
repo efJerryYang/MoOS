@@ -1,9 +1,10 @@
 #include "lib/unistd.h"
 #include "lib/stdio.c"
 signed main(){
+	printf("hello init;");
 	if(fork()==0){
-		// execve("shell",0,0);
-		execve("runtest",0,0);
+		execve("shell",0,0);
+		// execve("runtest",0,0);
 	}else{
 		for(;;){
 			int status;

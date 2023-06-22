@@ -159,9 +159,6 @@ loop{
 	//    println!("USER TRAP: stval={:#x}",stval);
 	task_list.exclusive_access()[proc_idx].utime+=get_time_ms()-task_list.exclusive_access()[proc_idx].otime;
 	task_list.exclusive_access()[proc_idx].otime=get_time_ms();
-    // task_list.exclusive_access()[mycpu().proc_idx].utime +=
-	// 	get_time_ms() - task_list.exclusive_access()[mycpu().proc_idx].otime;
-    // task_list.exclusive_access()[mycpu().proc_idx].otime = get_time_ms();
 	
     match scause.cause() {
 		Trap::Exception(Exception::UserEnvCall) => {

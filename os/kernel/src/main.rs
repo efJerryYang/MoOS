@@ -121,21 +121,17 @@ unsafe fn load_user_file() {
 		fn forktest_start();
         fn forktest_end();
     }
-    // crate_task_from_elf(slice::from_raw_parts(
-    //     init_start as *const u8,
-    //     init_end as usize - init_start as usize,
-    // ));
-	crate_task_from_elf(slice::from_raw_parts(
-        forktest_start as *const u8,
-        forktest_end as usize - init_start as usize,
+    crate_task_from_elf(slice::from_raw_parts(
+        init_start as *const u8,
+        init_end as usize - init_start as usize,
     ));
     mycpu().proc_idx = 0;
-	for i in 0..10{
+	loop{
 		println!("len:{}",TASK_QUEUE.len());
 		let runnable: Runnable=TASK_QUEUE.fetch();
 		runnable.run();
 	}
-    schedule();
+    // schedule();
 }
 
 static LOCK: AtomicU8 = AtomicU8::new(0);

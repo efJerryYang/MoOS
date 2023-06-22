@@ -324,5 +324,6 @@ impl PCB {
 }
 
 pub fn myproc() -> &'static mut PCB {
+	panic!("myproc");
     &mut task_list.exclusive_access()[mycpu().proc_idx]
 }
