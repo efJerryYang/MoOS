@@ -2,7 +2,6 @@ use crate::{
     console::print,
     fs::vfs::{INode, Metadata, Result, Timespec},
     sbi::console_getchar,
-    syscall::process::sys_yield,
 };
 use _core::{any::Any, cmp::min};
 use alloc::{

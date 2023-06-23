@@ -1,6 +1,6 @@
 //! App management syscalls
 
-use core::{clone, future::Future, pin::Pin, task::{Context, Poll}};
+use core::{clone, future::Future, pin::Pin, task::{Context, Poll}, ops::DerefMut};
 
 use alloc::{
     boxed::Box,
@@ -14,44 +14,202 @@ use lazy_static::lazy_static;
 use xmas_elf::ElfFile;
 
 use crate::{
-    mm::{page_table::translate_str, translated_byte_buffer, MemorySet},
+    mm::{page_table::translate_str, translated_byte_buffer, MemorySet, VirtAddr, KERNEL_SPACE, MapPermission},
     sync::UPSafeCell,
-    syscall::translate,
     task::{
-        cpu::mycpu,
-        myproc,
-        proc::{clone, exec_from_elf, kill, sched, schedule},
-        task_list, ProcessState, PCB,
-    },
+        task_list, ProcessState, PCB, Thread, TASK_QUEUE, PID_ALLOCATOR, ProcessContext, Process,
+    }, config::{PAGE_SIZE, TRAPFRAME, TRAMPOLINE, KERNEL_STACK_SIZE}, trap::{TrapFrame, user_loop},
 };
 
 use super::raw_ptr::{UserPtr, Out};
 
-/// task exits and submit an exit code
-pub unsafe fn sys_exit(proc_idx:usize,exit_code: i32)->isize{
-    let proc = &mut task_list.exclusive_access()[proc_idx];
-    proc.state = ProcessState::ZOMBIE;
-    proc.exit_code = exit_code as isize;
-    for child in task_list.exclusive_access() {
-        if (child.parent == proc.pid) {
-            child.parent = 0;
+struct YieldFuture(bool);
+
+impl Future for YieldFuture {
+    type Output = ();
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        if self.0 {
+            return Poll::Ready(());
         }
+        self.0 = true;
+        cx.waker().wake_by_ref();
+        Poll::Pending
     }
-	0
-    // println!("[kernel] process {} exited with code {}",mycpu().proc_idx, exit_code);
-    // sched();
 }
 
-pub unsafe fn sys_getpid(proc_idx:usize) -> isize {
-    proc_idx as isize
-}
-pub unsafe fn sys_getppid() -> isize {
-    task_list.exclusive_access()[mycpu().proc_idx].parent as isize
+impl Thread{
+/// task exits and submit an exit code
+	pub unsafe fn sys_exit(&self,exit_code: i32)->isize{
+		let proc = &mut self.proc.inner.lock();
+		proc.state = ProcessState::ZOMBIE;
+		proc.exit_code = exit_code as isize;
+		let mut x=proc.parent.as_ref().unwrap().inner.lock();
+		x.children.turn_into_zombie(proc.pid);
+		self.inner.exclusive_access().exit=true;
+		0
+	}
+
+	pub unsafe fn sys_getpid(& self) -> isize {
+		self.proc.pid as isize
+	}
+	pub unsafe fn sys_getppid(&self) -> isize {
+		self.proc.inner.lock().parent.as_ref().unwrap().pid as isize
+	}
+
+	pub unsafe fn sys_clone(&self, stack: usize) -> isize {
+		let mut pcb = self.proc.inner.lock();
+		let mut pcb =pcb.deref_mut();
+		let pid=pcb.pid;
+		let new_pid= PID_ALLOCATOR.alloc_pid();
+
+		let mut new_pcb=PCB::new();
+		new_pcb.parent=Some(self.proc.clone());
+		new_pcb.fd_manager=pcb.fd_manager.clone();
+		new_pcb.memory_set=MemorySet::from_existed_user(&pcb.memory_set);
+		new_pcb.heap_pos = VirtAddr::from(pcb.memory_set.get_areas_end());
+		new_pcb.heap_pos.0 += PAGE_SIZE;
+		new_pcb.trapframe_ppn = new_pcb
+			.memory_set
+			.translate(VirtAddr::from(TRAPFRAME).into())
+			.unwrap()
+			.ppn();
+		*(new_pcb.trapframe_ppn.get_mut() as *mut TrapFrame) = *(pcb.trapframe_ppn.get_mut() as *mut TrapFrame);
+		(*(new_pcb.trapframe_ppn.get_mut() as *mut TrapFrame)).x[10] = 0;
+		(*(new_pcb.trapframe_ppn.get_mut() as *mut TrapFrame)).kernel_sp =
+			TRAMPOLINE - KERNEL_STACK_SIZE * new_pid;
+		KERNEL_SPACE.exclusive_access().insert_framed_area(
+			(TRAMPOLINE - KERNEL_STACK_SIZE * (new_pid + 1)).into(),
+			(TRAMPOLINE - KERNEL_STACK_SIZE * new_pid).into(),
+			MapPermission::R | MapPermission::W,
+		);
+		if (stack != 0) {
+			(*(pcb.trapframe_ppn.get_mut() as *mut TrapFrame)).x[2] = stack;
+		}
+		
+		new_pcb.context = pcb.context;
+		new_pcb.context.ra = user_loop as usize;
+		new_pcb.context.sp = TRAMPOLINE - KERNEL_STACK_SIZE * new_pid;
+		new_pcb.state = ProcessState::READY;
+		new_pcb.pid = new_pid;
+		
+		let new_proc=Arc::new(Process::new(new_pcb));
+		pcb.children.alive.insert(new_pid, new_proc.clone());
+		
+		let (r,t)=async_task::spawn(user_loop(Arc::new(Thread::new(new_proc.clone()))), |runnable|{TASK_QUEUE.push(runnable);});
+		r.schedule();
+		t.detach();
+		return new_pid as isize;
+	}
+
+	pub unsafe fn sys_exec(& self,buf: *mut u8, argv: usize) -> isize {
+		let pcb=self.proc.inner.lock();
+		let path = translate_str(
+				pcb
+				.memory_set
+				.token(),
+			buf,
+		);
+		drop(pcb);
+		extern "C" {
+			fn _app_num();
+		}
+		let num = (_app_num as usize as *const usize).read_volatile();
+		let range = ((0..num).find(|&i| APP_NAMES[i] == path).map(get_location));
+		if (range == None) {
+			println!("{} : not found.", path);
+			self.sys_exit(-1);
+			return 1;
+		}
+
+		let (start, end) = range.unwrap();
+
+		let elf_file: Result<ElfFile, &str> =
+			ElfFile::new(slice::from_raw_parts(start as *const u8, end - start));
+		match elf_file {
+			Ok(elf) => self.exec_from_elf(&elf, argv),
+			Err(e) => 1,
+		}
+	}
+
+	pub async fn async_yield(){
+		YieldFuture(false).await
+	}
+
+	pub async unsafe fn sys_waitpid(&self, pid: isize, status:UserPtr<isize,Out>, options: usize) -> isize {
+		let mut pcb_lock=self.proc.inner.lock();
+		let mut pcb=pcb_lock.deref_mut();
+		let nowpid = pcb.pid;
+		if (pid == -1) {
+			loop {
+				let pid={
+					let mut children= &mut pcb.children.zombie;
+					self.proc.inner.force_unlock();
+					while children.is_empty() {
+						Thread::async_yield().await;
+					}
+					let mut pcb_lock = self.proc.inner.lock();
+					let (pid,process) = children.first_key_value().unwrap();
+					if (status.as_usize() as usize != 0) {
+						let status=status.raw_ptr_mut();
+						*status = (process.inner.lock().exit_code << 8) | (0);
+					}
+					*pid
+				};
+				let mut children= &mut pcb.children.zombie;
+				children.remove_entry(&pid);
+				return pid as isize;
+				// let mut p = 0xffffffff;
+				// for x in task_list.exclusive_access() {
+				// 	if (x.state == ProcessState::ZOMBIE && x.parent == nowpid) {
+				// 		p = x.pid;
+				// 		break;
+				// 	}
+				// }
+				// if (p == 0xffffffff) {
+				// 	Thread::async_yield().await;
+				// } else {
+				// 	if (status.as_usize() as usize != 0) {
+				// 		let status=status.raw_ptr_mut();
+				// 		*status = (task_list.exclusive_access()[p].exit_code << 8) | (0);
+				// 	}
+				// 	task_list.exclusive_access()[p].state = ProcessState::KILLED;
+				// 	task_list.exclusive_access()[p].memory_set = MemorySet::new_bare();
+				// 	return p as isize;
+				// }
+			}
+		} else {
+			let mut children= &mut pcb.children.zombie;
+			if let Some(process) = children.get(&(pid as usize)){
+				if (status.as_usize() as usize != 0) {
+					let status=status.raw_ptr_mut();
+					*status = (process.inner.lock().exit_code << 8) | (0);
+				}
+				children.remove(&(pid as usize) );
+			}else{
+				return -1;
+			}
+			// let x = &mut task_list.exclusive_access()[pid as usize];
+			// if (x.parent != nowpid || (x.state == ProcessState::KILLED)) {
+			// 	return -1;
+			// } else {
+			// 	while (x.state != ProcessState::ZOMBIE) {
+			// 		Thread::async_yield().await;
+			// 		// sys_yield();
+			// 	}
+			// 	if (status.as_usize() as usize != 0) {
+			// 		let status=status.raw_ptr_mut();
+			// 		*status = (x.exit_code << 8) | (0);
+			// 	}
+			// 	x.state = ProcessState::KILLED;
+			// 	x.memory_set = MemorySet::new_bare();
+			// 	return pid as isize;
+			// }
+		}
+		0
+	}
 }
 
-pub unsafe fn sys_clone(pid:usize,stack: usize) -> isize {
-    return clone(pid,stack) as isize;
-}
 
 lazy_static! {
     ///All of app's name
@@ -89,103 +247,5 @@ fn get_location(id: usize) -> (usize, usize) {
             .add(id + 2)
             .read_volatile();
         (start, end)
-    }
-}
-
-pub unsafe fn sys_exec(proc_idx:usize,buf: *mut u8, argv: usize) -> isize {
-    let path = translate_str(
-        task_list.exclusive_access()[proc_idx]
-            .memory_set
-            .token(),
-        buf,
-    );
-    extern "C" {
-        fn _app_num();
-    }
-    let num = (_app_num as usize as *const usize).read_volatile();
-    let range = ((0..num).find(|&i| APP_NAMES[i] == path).map(get_location));
-    if (range == None) {
-        println!("{} : not found.", path);
-        sys_exit(proc_idx,-1);
-        return 1;
-    }
-
-    let (start, end) = range.unwrap();
-
-    let elf_file: Result<ElfFile, &str> =
-        ElfFile::new(slice::from_raw_parts(start as *const u8, end - start));
-    match elf_file {
-        Ok(elf) => exec_from_elf(proc_idx,&elf, argv),
-        Err(e) => 1,
-    }
-}
-
-pub unsafe fn sys_yield() -> isize {
-    myproc().state = ProcessState::READY;
-    sched();
-    0
-}
-
-struct YieldFuture(bool);
-
-impl Future for YieldFuture {
-    type Output = ();
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        if self.0 {
-            return Poll::Ready(());
-        }
-        self.0 = true;
-        cx.waker().wake_by_ref();
-        Poll::Pending
-    }
-}
-
-
-pub async fn async_yield(){
-	YieldFuture(false).await
-}
-
-pub async unsafe fn sys_waitpid(proc_idx:usize, pid: isize, status:UserPtr<isize,Out>, options: usize) -> isize {
-	
-    let nowpid = proc_idx;
-    if (pid == -1) {
-        loop {
-            let mut p = 0xffffffff;
-            for x in task_list.exclusive_access() {
-                if (x.state == ProcessState::ZOMBIE && x.parent == nowpid) {
-                    p = x.pid;
-                    break;
-                }
-            }
-            if (p == 0xffffffff) {
-				async_yield().await;
-            } else {
-                if (status.as_usize() as usize != 0) {
-					let status=status.raw_ptr_mut();
-                    *status = (task_list.exclusive_access()[p].exit_code << 8) | (0);
-                }
-                task_list.exclusive_access()[p].state = ProcessState::KILLED;
-                task_list.exclusive_access()[p].memory_set = MemorySet::new_bare();
-                return p as isize;
-            }
-        }
-    } else {
-        let x = &mut task_list.exclusive_access()[pid as usize];
-        if (x.parent != nowpid || (x.state == ProcessState::KILLED)) {
-            return -1;
-        } else {
-            while (x.state != ProcessState::ZOMBIE) {
-				async_yield().await;
-                // sys_yield();
-            }
-            if (status.as_usize() as usize != 0) {
-				let status=status.raw_ptr_mut();
-                *status = (x.exit_code << 8) | (0);
-            }
-            x.state = ProcessState::KILLED;
-            x.memory_set = MemorySet::new_bare();
-            return pid as isize;
-        }
     }
 }

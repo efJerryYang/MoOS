@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
+#![feature(map_first_last)]
 #![allow(unused)]
 
 extern crate alloc;
@@ -34,7 +35,7 @@ pub mod timer;
 pub mod trap;
 use crate::mm::memory_set::{MapArea, MapPermission, MapType};
 use crate::mm::VirtAddr;
-use crate::task::TASK_QUEUE;
+use crate::task::{TASK_QUEUE, Thread, PID_ALLOCATOR, Process};
 use crate::trap::user_loop;
 use crate::{
     config::{KERNEL_STACK_SIZE, TRAMPOLINE, USER_STACK_SIZE},
@@ -47,6 +48,7 @@ use crate::{
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use config::TRAPFRAME;
 use core::future::Future;
+use core::ops::DerefMut;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 use core::{
@@ -58,7 +60,6 @@ use core::{
     str::Bytes,
     sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering},
 };
-use task::{cpu::mycpu, proc::schedule};
 use trap::TrapFrame;
 use xmas_elf::ElfFile;
 
@@ -72,20 +73,27 @@ use riscv::register::{
 global_asm!(include_str!("entry.asm"));
 global_asm!(include_str!("user_bin.S"));
 
-unsafe fn crate_task_from_elf(userbin: &[u8]) {
+
+
+
+// lazy_static!{
+// 	static ref pid_top:Arc<Mutex<usize>>=Arc::new(Mutex::new(0));
+// }
+
+
+fn crate_task_from_elf(userbin: &[u8]) {
     // let userbin=include_bytes!("../../../testsuits-for-oskernel/riscv-syscalls-testing/user/build/riscv64/write");
     let elf_file = ElfFile::new(userbin).unwrap();
-    let inner = task_list.exclusive_access();
-    let idx = inner.len();
-    inner.push(PCB::new());
-    let task: &mut PCB = &mut inner[idx];
+
+	let pid =PID_ALLOCATOR.alloc_pid();
+	let mut task=PCB::new();
 
     // let user_pagetable=&mut task.memory_set;
     let (user_pagetable, user_stack, entry) = MemorySet::from_elf(&elf_file);
     println!("entry:{:#x}", entry);
     KERNEL_SPACE.exclusive_access().insert_framed_area(
-        (TRAMPOLINE - KERNEL_STACK_SIZE * (idx + 1)).into(),
-        (TRAMPOLINE - KERNEL_STACK_SIZE * idx).into(),
+        (TRAMPOLINE - KERNEL_STACK_SIZE * (pid + 1)).into(),
+        (TRAMPOLINE - KERNEL_STACK_SIZE * pid).into(),
         MapPermission::R | MapPermission::W,
     );
     //trapframe
@@ -100,16 +108,20 @@ unsafe fn crate_task_from_elf(userbin: &[u8]) {
         entry,
         user_stack - 8,
         KERNEL_SPACE.exclusive_access().token(),
-        TRAMPOLINE - KERNEL_STACK_SIZE * idx,
+        TRAMPOLINE - KERNEL_STACK_SIZE * pid,
         0 as usize,
     );
-    task.context.sp = TRAMPOLINE - KERNEL_STACK_SIZE * idx;
+    task.context.sp = TRAMPOLINE - KERNEL_STACK_SIZE * pid;
     task.context.ra = 0 as usize;
+	let new_proc= Arc::new(Process::new(task));
 	
-	let (r,t)=async_task::spawn(user_loop(idx), |runnable|{TASK_QUEUE.push(runnable);});
-	r.schedule();
-	t.detach();
-    drop(inner);
+	let thread=Arc::new(Thread::new(new_proc));
+
+	unsafe{
+		let (r,t)=async_task::spawn(user_loop(thread), |runnable|{TASK_QUEUE.push(runnable);});
+		r.schedule();
+		t.detach();
+	}
 }
 
 
@@ -125,50 +137,15 @@ unsafe fn load_user_file() {
         init_start as *const u8,
         init_end as usize - init_start as usize,
     ));
-    mycpu().proc_idx = 0;
 	loop{
-		println!("len:{}",TASK_QUEUE.len());
+		// println!("<{}>",TASK_QUEUE.len());
 		let runnable: Runnable=TASK_QUEUE.fetch();
 		runnable.run();
+		// println!(">{}<",TASK_QUEUE.len());
 	}
-    // schedule();
 }
 
 static LOCK: AtomicU8 = AtomicU8::new(0);
-
-async fn say_world() -> usize {
-    println!("hello world");
-	return 233;
-}
-
-// struct Test{
-
-// }
-
-// impl Future for Test{
-// 	type Output = usize;
-// 	fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
-// 		println!("hello");
-// 		_cx.waker().wake_by_ref();
-// 		Poll::Pending
-// 	}
-// }
-
-// fn async_test()-> !{
-// 	println!("Hello async!");
-
-// 	let scheduler = |runnable|{println!("pushing.");TASK_QUEUE.push(runnable);println!("push done.");};
-// 	let (r,t)= async_task::spawn(Test{}, scheduler);
-// 	let waker=r.waker();
-// 	r.schedule();
-// 	for i in 0..10{
-// 		let x=TASK_QUEUE.fetch();
-// 		x.run();
-// 	}
-// 	println!("entering loop.");
-// 	loop{}
-	
-// }
 
 #[no_mangle]
 pub fn rust_main() -> ! {

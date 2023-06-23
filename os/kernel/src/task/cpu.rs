@@ -25,7 +25,3 @@ impl CPU {
 lazy_static! {
     pub static ref CPUS: UPSafeCell<CPU> = unsafe { UPSafeCell::new(CPU::new()) };
 }
-
-pub fn mycpu() -> &'static mut CPU {
-    CPUS.exclusive_access()
-}

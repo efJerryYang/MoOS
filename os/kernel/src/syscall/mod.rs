@@ -57,7 +57,7 @@ use crate::{
         page_table::{translate_str, PageTable},
         VirtAddr,
     },
-    task::{cpu::mycpu, myproc, task_list, PCB, proc},
+    task::{task_list, PCB, proc, Thread},
 };
 
 #[repr(C)]
@@ -66,94 +66,87 @@ pub struct timespec {
     tv_nsec: usize,
 }
 
-pub fn translate(proc_idx:usize,ptr: usize) -> usize {
-    PageTable::from_token(task_list.exclusive_access()[proc_idx].memory_set.token())
-        .translate_va(VirtAddr::from(ptr as usize))
-        .unwrap()
-        .get_mut() as *mut u8 as usize
-}
 
 /// handle syscall exception with `syscall_id` and other arguments
-pub async unsafe fn syscall(proc_idx:usize, syscall_id: usize, args: [usize; 6]) -> isize {
-	// println!("syscall:{}",syscall_id);
-    let result = match syscall_id {
-        SYSCALL_WRITE => sys_write(proc_idx,args[0], args[1] as *const u8, args[2]),
-        SYSCALL_EXIT => {
-			sys_exit(proc_idx, args[0] as i32);
-			-1
-		},
-        SYSCALL_NANOSLEEP => sys_nanosleep(
-            translate(proc_idx,args[0]) as *mut timespec,
-            translate(proc_idx,args[1]) as *mut timespec,
-        ),
-        SYSCALL_READ => sys_read(proc_idx,args[0] as usize, args[1], args[2]).await,
-        SYSCALL_SCHED_YIELD => {async_yield().await;0},
-        SYSCALL_GETTIMEOFDAY => sys_gettimeofday(args[0] as *mut usize),
-        SYSCALL_GETPID => sys_getpid(proc_idx),
-        SYSCALL_GETPPID => sys_getppid(),
-        SYSCALL_CLONE => sys_clone(proc_idx,args[1]),
-        SYSCALL_EXECVE => sys_exec(proc_idx,args[0] as *mut u8, args[1] as usize),
-        SYSCALL_WAITPID => sys_waitpid(
-			proc_idx,
-            args[0] as isize,
-            if (args[1] == 0) {
-                UserPtr::<isize,Out>::from_usize(0)
-            } else {
-				UserPtr::<isize,Out>::from_usize(translate(proc_idx,args[1]))
-            } ,
-            args[2],
-        ).await,
-        SYSCALL_TIMES => sys_times(translate(proc_idx, args[0])),
-        SYSCALL_UMOUNT => sys_umount(),
-        SYSCALL_MOUNT => sys_mount(),
-        SYSCALL_BRK => sys_brk(args[0]),
-        SYSCALL_OPENAT => sys_openat(
-            args[0] as isize,
-            &translate_str(get_token(), args[1] as *mut u8),
-            args[2] as isize,
-        ),
-        SYSCALL_CLOSE => sys_close(args[0] as isize),
-        SYSCALL_GETCWD => sys_getcwd(args[0] as *mut u8, args[1]),
-        SYSCALL_GETDENTS64 => sys_getdents64(
-            args[0] as usize,
-            translate(proc_idx, args[1]) as *mut u8,
-            args[2] as usize,
-        ),
-        SYSCALL_DUP => sys_dup(args[0] as isize),
-        SYSCALL_DUP3 => sys_dup3(args[0] as isize, args[1] as isize, args[2] as isize),
-        SYSCALL_MKDIRAT => sys_mkdirat(
-            args[0] as isize,
-            &translate_str(get_token(), args[1] as *mut u8),
-            args[2] as usize,
-        ),
-        SYSCALL_CHDIR => sys_chdir(&translate_str(get_token(), args[0] as *mut u8)),
-        SYSCALL_FSTAT => sys_fstat(args[0] as isize, args[1] as *mut u8),
-        SYSCALL_UNLINKAT => sys_unlinkat(
-            args[0] as isize,
-            &translate_str(get_token(), args[1] as *mut u8),
-            args[2] as usize,
-        ),
-        SYSCALL_UNAME => sys_uname(translate(proc_idx,args[0]) as *mut u8),
-        SYSCALL_MUNMAP => sys_munmap(args[0] as *mut usize, args[1] as usize),
-        SYSCALL_MMAP => sys_mmap(
-            args[0] as usize,
-            args[1] as u32 as usize,
-            args[2] as i32,
-            args[3] as i32,
-            args[4] as usize,
-            args[5] as usize,
-        ),
-        SYSCALL_PIPE2 => {
-            // println!("pipe2: arg0: {:p}", args[0] as *mut u32);
-            sys_pipe2(translate(proc_idx,args[0]) as *mut u32)
-        }
-        _ => panic!("Unsupported syscall_id: {}", syscall_id),
-    };
-	result
-}
 
-pub fn get_token() -> usize {
-    task_list.exclusive_access()[mycpu().proc_idx]
-        .memory_set
-        .token()
+impl Thread{
+	pub fn translate(& self,ptr: usize) -> usize {
+		unsafe{self.proc.inner.force_unlock();};
+		PageTable::from_token(self.proc.inner.lock().memory_set.token())
+			.translate_va(VirtAddr::from(ptr as usize))
+			.unwrap()
+			.get_mut() as *mut u8 as usize
+	}
+	pub async unsafe fn syscall(& self, syscall_id: usize, args: [usize; 6]) -> isize {
+		// println!("[syscall] id={}",syscall_id);
+		let result = match syscall_id {
+			SYSCALL_WRITE => self.sys_write(args[0], args[1] as *const u8, args[2]),
+			SYSCALL_EXIT =>  self.sys_exit(args[0] as i32),
+			SYSCALL_NANOSLEEP => Thread::sys_nanosleep(
+				self.translate(args[0]),
+				self.translate(args[1]),
+			).await,
+			SYSCALL_READ => self.sys_read(args[0] as usize, args[1], args[2]).await,
+			SYSCALL_SCHED_YIELD => {Thread::async_yield().await;0},
+			SYSCALL_GETTIMEOFDAY => self.sys_gettimeofday(args[0] as *mut usize),
+			SYSCALL_GETPID => self.sys_getpid(),
+			SYSCALL_GETPPID => self.sys_getppid(),
+			SYSCALL_CLONE => self.sys_clone(args[1]),
+			SYSCALL_EXECVE => self.sys_exec(args[0] as *mut u8, args[1] as usize),
+			SYSCALL_WAITPID => self.sys_waitpid(
+				args[0] as isize,
+				if (args[1] == 0) {
+					UserPtr::<isize,Out>::from_usize(0)
+				} else {
+					UserPtr::<isize,Out>::from_usize(self.translate(args[1]))
+				} ,
+				args[2],
+			).await,
+			SYSCALL_TIMES => self.sys_times(self.translate( args[0])),
+			SYSCALL_UMOUNT => self.sys_umount(),
+			SYSCALL_MOUNT => self.sys_mount(),
+			SYSCALL_BRK => self.sys_brk(args[0]),
+			SYSCALL_OPENAT => self.sys_openat(
+				args[0] as isize,
+				args[1],
+				args[2] as isize,
+			),
+			SYSCALL_CLOSE => self.sys_close(args[0] as isize),
+			SYSCALL_GETCWD => self.sys_getcwd(args[0] as *mut u8, args[1]),
+			SYSCALL_GETDENTS64 => self.sys_getdents64(
+				args[0] as usize,
+				self.translate(args[1]) as *mut u8,
+				args[2] as usize,
+			),
+			SYSCALL_DUP => self.sys_dup(args[0] as isize),
+			SYSCALL_DUP3 => self.sys_dup3(args[0] as isize, args[1] as isize, args[2] as isize),
+			SYSCALL_MKDIRAT => self.sys_mkdirat(
+				args[0] as isize,
+				args[1],
+				args[2] as usize,
+			),
+			SYSCALL_CHDIR => self.sys_chdir(args[0]),
+			SYSCALL_FSTAT => self.sys_fstat(args[0] as isize, args[1] as *mut u8),
+			SYSCALL_UNLINKAT => self.sys_unlinkat(
+				args[0] as isize,
+				args[1],
+				args[2] as usize,
+			),
+			SYSCALL_UNAME => Thread::sys_uname(self.translate(args[0]) as *mut u8),
+			SYSCALL_MUNMAP => Thread::sys_munmap(args[0] as *mut usize, args[1] as usize),
+			SYSCALL_MMAP => self.sys_mmap(
+				args[0] as usize,
+				args[1] as u32 as usize,
+				args[2] as i32,
+				args[3] as i32,
+				args[4] as usize,
+				args[5] as usize,
+			),
+			SYSCALL_PIPE2 => {
+				self.sys_pipe2(self.translate(args[0]) as *mut u32)
+			}
+			_ => panic!("Unsupported syscall_id: {}", syscall_id),
+		};
+		result
+	}
 }
