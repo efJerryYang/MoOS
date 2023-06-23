@@ -5,20 +5,19 @@ use crate::{
     },
     mm::{PhysAddr, VirtAddr},
 };
-use alloc::{string::{String, ToString}, collections::VecDeque};
+use alloc::{string::{String, ToString}, collections::{VecDeque, BTreeMap}};
 use async_task::Runnable;
 pub use context::ProcessContext;
-use core::arch::global_asm;
+use core::{arch::global_asm, cell::UnsafeCell, ops::DerefMut};
 use core::default::Default;
 use hashbrown::HashMap;
 pub mod context;
 pub mod cpu;
 pub mod proc;
-use self::cpu::mycpu;
 use crate::mm::{MemorySet, PhysPageNum};
 use alloc::{sync::Arc, vec, vec::Vec};
-use lazy_static::lazy_static;
-use spin::Mutex;
+use lazy_static::{lazy_static, __Deref};
+use spin::{Mutex, mutex::SpinMutex, Spin};
 
 use crate::UPSafeCell;
 
@@ -287,6 +286,46 @@ impl GlobalDentryCache {
     }
 }
 
+pub struct Thread{
+	pub tid: usize,
+	pub proc: Arc<Process>,
+	pub inner: UPSafeCell<ThreadInner>
+}
+
+impl Thread {
+	pub fn new(procs:Arc<Process>)->Self{
+		Self{
+			tid:0,
+			proc:procs,
+			inner: UPSafeCell::new(ThreadInner::new())
+		}
+	}
+	
+}
+
+pub struct ThreadInner{
+	pub exit:bool
+}
+
+impl ThreadInner{
+	pub fn new()->Self{
+		Self { exit: false }
+	}
+}
+pub struct Process{
+	pub pid: usize,
+	pub inner:SpinMutex<PCB>,
+}
+
+impl Process {
+	pub fn new(pcb:PCB)->Self{
+		Self{
+			pid:pcb.pid,
+			inner:SpinMutex::new(pcb),
+		}
+	}
+}
+
 pub struct PCB {
     pub pid: usize,
     pub state: ProcessState,
@@ -294,7 +333,8 @@ pub struct PCB {
     pub trapframe_ppn: PhysPageNum,
     pub memory_set: MemorySet,
     pub heap_pos: VirtAddr,
-    pub parent: usize,
+    pub parent: Option<Arc<Process> >,
+	pub children: Children,
     pub exit_code: isize,
     pub otime: usize,
     pub utime: usize,
@@ -312,7 +352,8 @@ impl PCB {
             trapframe_ppn: 0.into(),
             memory_set: MemorySet::new_bare(),
             heap_pos: 0.into(),
-            parent: 0xffffffff,
+            parent: None,
+			children:Children::new(),
             exit_code: 0,
             utime: 0,
             otime: 0,
@@ -323,7 +364,41 @@ impl PCB {
     }
 }
 
-pub fn myproc() -> &'static mut PCB {
-	panic!("myproc");
-    &mut task_list.exclusive_access()[mycpu().proc_idx]
+
+pub struct PidAllocator{
+	pid_top:Arc<SpinMutex<usize>>
+}
+
+impl  PidAllocator {
+	pub fn new()->Self{
+		Self{
+			pid_top:Arc::new(SpinMutex::new(0))
+		}
+	}
+	pub fn alloc_pid(&self)-> usize{
+		let mut inner=self.pid_top.lock();
+		let mut inner=inner.deref_mut();
+		*inner+=1;
+		return *inner-1;
+	}
+}
+
+lazy_static!{pub static ref PID_ALLOCATOR:PidAllocator=PidAllocator::new();}
+
+pub struct Children{
+	pub alive: BTreeMap<usize, Arc<Process> >,
+	pub zombie: BTreeMap<usize, Arc<Process> >,
+}
+
+impl Children {
+	pub fn new()->Self{
+		Self{
+			alive: BTreeMap::new(),
+			zombie: BTreeMap::new(),
+		}
+	}
+	pub fn turn_into_zombie(&mut self, pid:usize){
+		let proc=self.alive.get(&pid).unwrap().clone();
+		self.zombie.insert(pid, proc);
+	}
 }

@@ -1,30 +1,17 @@
-//! Trap handling functionality
-//!
-//! For rCore, we have a single trap entry point, namely `__alltraps`. At
-//! initialization in [`init()`], we set the `stvec` CSR to point to it.
-//!
-//! All traps go through `__alltraps`, which is defined in `trap.S`. The
-//! assembly language code does just enough work restore the kernel space
-//! context, ensuring that Rust code safely runs, and transfers control to
-//! [`trap_handler()`].
-//!
-//! It then calls different functionality based on what exactly the exception
-//! was. For example, timer interrupts trigger task preemption, and syscalls go
-//! to [`syscall()`].
-
 mod context;
 
 use crate::config::TRAMPOLINE;
 use crate::task::{ProcessContext, PCB};
+use crate::task::Thread;
 use crate::{
     config::TRAPFRAME,
-    syscall::{process::sys_yield, syscall},
-    task::{cpu::mycpu, proc::*, task_list},
+    task::{ proc::*, task_list},
     timer::{get_time_ms, set_next_trigger},
 };
 use core::arch::asm;
 use core::arch::global_asm;
 use core::task::Context;
+use alloc::sync::Arc;
 use riscv::register::{
     mtvec::TrapMode,
     scause::{self, Exception, Interrupt, Trap},
@@ -48,101 +35,29 @@ pub fn trap_from_kernel() {
     panic!("kernel trap");
 }
 
-// #[no_mangle]
-// /// handle an interrupt, exception, or system call from user space
-// pub async unsafe fn trap_handler() -> ! {
-//     stvec::write(trap_from_kernel as usize, TrapMode::Direct);
-
-//     let scause = scause::read(); // get trap cause
-//     let stval = stval::read(); // get extra value
-//                                println!("USER TRAP: stval={:#x}",stval);
-//     task_list.exclusive_access()[mycpu().proc_idx].utime +=
-//         get_time_ms() - task_list.exclusive_access()[mycpu().proc_idx].otime;
-//     task_list.exclusive_access()[mycpu().proc_idx].otime = get_time_ms();
-
-//     match scause.cause() {
-//         Trap::Exception(Exception::UserEnvCall) => {
-//             let mut cx: &mut TrapFrame = task_list.exclusive_access()[mycpu().proc_idx]
-//                 .trapframe_ppn
-//                 .get_mut();
-//             cx.sepc += 4;
-//             let result = syscall(
-//                 cx.x[17],
-//                 [cx.x[10], cx.x[11], cx.x[12], cx.x[13], cx.x[14], cx.x[15]],
-//             ) as usize;
-//             cx = task_list.exclusive_access()[mycpu().proc_idx]
-//                 .trapframe_ppn
-//                 .get_mut();
-//             cx.x[10] = result;
-//         }
-//         Trap::Exception(Exception::StoreFault)
-//         | Trap::Exception(Exception::StorePageFault)
-//         | Trap::Exception(Exception::LoadFault)
-//         | Trap::Exception(Exception::LoadPageFault) => {
-//             let cx: &mut TrapFrame = task_list.exclusive_access()[mycpu().proc_idx]
-//                 .trapframe_ppn
-//                 .get_mut();
-//             println!("USER TRAP: stval={:#x},pc={:#x}", stval, cx.sepc);
-//             println!("[kernel] PageFault in application, kernel killed it.");
-//             match scause.cause() {
-//                 Trap::Exception(Exception::StoreFault) => {
-//                     println!("StoreFault");
-//                 }
-//                 Trap::Exception(Exception::StorePageFault) => {
-//                     println!("StorePageFault");
-//                 }
-//                 Trap::Exception(Exception::LoadFault) => {
-//                     println!("LoadFault");
-//                 }
-//                 Trap::Exception(Exception::LoadPageFault) => {
-//                     println!("LoadPageFault");
-//                 }
-//                 _ => {}
-//             }
-//             kill();
-//         }
-//         Trap::Exception(Exception::IllegalInstruction) => {
-//             println!("[kernel] IllegalInstruction in application, kernel killed it.");
-//         }
-//         Trap::Interrupt(Interrupt::SupervisorTimer) => {
-//             set_next_trigger();
-//             // sys_yield();
-//         }
-//         _ => {
-//             let cx: &mut TrapFrame = task_list.exclusive_access()[mycpu().proc_idx]
-//                 .trapframe_ppn
-//                 .get_mut();
-//             panic!(
-//                 "Unsupported trap {:?}, stval = {:#x},spec = {:#x},pid = {}",
-//                 scause.cause(),
-//                 stval,
-//                 cx.sepc,
-//                 mycpu().proc_idx
-//             );
-//         }
-//     }
-// }
-
-
 #[no_mangle]
-pub async unsafe fn user_loop(proc_idx:usize){
-	println!("[New Thread] pid={},spec={:#x}",proc_idx,(*(task_list.exclusive_access()[proc_idx].trapframe_ppn.get_mut() as *mut TrapFrame)).sepc);
+pub async unsafe fn user_loop(thread: Arc<Thread>){
+	{
+	let mut pcb=thread.proc.inner.lock();
+	println!("[New Thread] pid={},spec={:#x}",pcb.pid,(*(pcb.trapframe_ppn.get_mut() as *mut TrapFrame)).sepc);
+	}
 	
-loop{
-	stvec::write(TRAMPOLINE as usize, TrapMode::Direct);
-    task_list.exclusive_access()[proc_idx].ktime +=
-        get_time_ms() - task_list.exclusive_access()[proc_idx].otime;
-    task_list.exclusive_access()[proc_idx].otime = get_time_ms();
+	loop{
+		let user_satp={
+		let mut pcb=thread.proc.inner.lock();
+		stvec::write(TRAMPOLINE as usize, TrapMode::Direct);
+		pcb.ktime +=get_time_ms() - pcb.otime;
+		pcb.otime = get_time_ms();
+		
+		let trapframe_ptr = TRAPFRAME;
+		pcb.memory_set.token()
+		};
 
-    let trapframe_ptr = TRAPFRAME;
-    let user_satp = task_list.exclusive_access()[proc_idx]
-        .memory_set
-        .token();
-    extern "C" {
-        fn __alltraps();
-        fn __restore();
-    }
-    let restore_va = __restore as usize - __alltraps as usize + TRAMPOLINE;
+	extern "C" {
+		fn __alltraps();
+		fn __restore();
+	}
+	let restore_va = __restore as usize - __alltraps as usize + TRAMPOLINE;
 	let mut cx=ProcessContext::new();
 	asm!(
         "fence.i",
@@ -151,79 +66,82 @@ loop{
         in("a0") &mut cx,      // a0 = virt addr of Trap Context
         in("a1") user_satp,        // a1 = phy addr of usr page table
     );
-	
+	let mut pcb=thread.proc.inner.lock();
 	stvec::write(trap_from_kernel as usize, TrapMode::Direct);
-	
-    let scause = scause::read(); // get trap cause
-    let stval = stval::read(); // get extra value
+	let scause = scause::read(); // get trap cause
+	let stval = stval::read(); // get extra value
 	//    println!("USER TRAP: stval={:#x}",stval);
-	task_list.exclusive_access()[proc_idx].utime+=get_time_ms()-task_list.exclusive_access()[proc_idx].otime;
-	task_list.exclusive_access()[proc_idx].otime=get_time_ms();
+	pcb.utime+=get_time_ms()-pcb.otime;
+	pcb.otime=get_time_ms();
+	drop(pcb);
 	
-    match scause.cause() {
+	match scause.cause() {
 		Trap::Exception(Exception::UserEnvCall) => {
-			let mut cx: &mut TrapFrame = task_list.exclusive_access()[proc_idx]
-			.trapframe_ppn
-			.get_mut();
-		// println!("[syscall] id={},arg={}",cx.x[17],cx.x[10]);
-		cx.sepc += 4;
-		let result = syscall(
-			proc_idx,
+			let mut pcb=thread.proc.inner.lock();
+				let mut cx: &mut TrapFrame = pcb
+				.trapframe_ppn
+				.get_mut();
+			cx.sepc += 4;
+			// println!("[syscall] id= {}",cx.x[17]);
+			drop(pcb);
+			let result = thread.syscall(
 			cx.x[17],
-                [cx.x[10], cx.x[11], cx.x[12], cx.x[13], cx.x[14], cx.x[15]],
-            ).await;
-            cx = task_list.exclusive_access()[proc_idx]
-                .trapframe_ppn
-                .get_mut();
-            cx.x[10] = result as usize;
-			// println!("result:{}",result);
-			if(result==-1) {break;}
-        }
-        Trap::Exception(Exception::StoreFault)
-        | Trap::Exception(Exception::StorePageFault)
-        | Trap::Exception(Exception::LoadFault)
-        | Trap::Exception(Exception::LoadPageFault) => {
-            let cx: &mut TrapFrame = task_list.exclusive_access()[proc_idx]
-                .trapframe_ppn
-                .get_mut();
-            println!("USER TRAP: stval={:#x},pc={:#x}", stval, cx.sepc);
-            println!("[kernel] PageFault in application, kernel killed it.");
-            match scause.cause() {
-                Trap::Exception(Exception::StoreFault) => {
-                    println!("StoreFault");
-                }
-                Trap::Exception(Exception::StorePageFault) => {
-                    println!("StorePageFault");
-                }
-                Trap::Exception(Exception::LoadFault) => {
-                    println!("LoadFault");
-                }
-                Trap::Exception(Exception::LoadPageFault) => {
-                    println!("LoadPageFault");
-                }
-                _ => {}
-            }
-            kill();
-        }
-        Trap::Exception(Exception::IllegalInstruction) => {
-            println!("[kernel] IllegalInstruction in application, kernel killed it.");
-        }
-        Trap::Interrupt(Interrupt::SupervisorTimer) => {
-            set_next_trigger();
-            // sys_yield();
-        }
-        _ => {
-            let cx: &mut TrapFrame = task_list.exclusive_access()[proc_idx]
-                .trapframe_ppn
-                .get_mut();
-            panic!(
-                "Unsupported trap {:?}, stval = {:#x},spec = {:#x},pid = {}",
-                scause.cause(),
-                stval,
-                cx.sepc,
-                proc_idx
-            );
-        }
+				[cx.x[10], cx.x[11], cx.x[12], cx.x[13], cx.x[14], cx.x[15]],
+			).await;
+			let mut pcb=thread.proc.inner.lock();
+			cx = pcb
+				.trapframe_ppn
+				.get_mut();
+			cx.x[10] = result as usize;
+			if(thread.inner.exclusive_access().exit){break;}
+		}
+		Trap::Exception(Exception::StoreFault)
+		| Trap::Exception(Exception::StorePageFault)
+		| Trap::Exception(Exception::LoadFault)
+		| Trap::Exception(Exception::LoadPageFault) => {
+			let mut pcb=thread.proc.inner.lock();
+			let cx: &mut TrapFrame = pcb
+				.trapframe_ppn
+				.get_mut();
+			println!("USER TRAP: stval={:#x},pc={:#x}", stval, cx.sepc);
+			println!("[kernel] PageFault in application, kernel killed it.");
+			match scause.cause() {
+				Trap::Exception(Exception::StoreFault) => {
+					println!("StoreFault");
+				}
+				Trap::Exception(Exception::StorePageFault) => {
+					println!("StorePageFault");
+				}
+				Trap::Exception(Exception::LoadFault) => {
+					println!("LoadFault");
+				}
+				Trap::Exception(Exception::LoadPageFault) => {
+					println!("LoadPageFault");
+				}
+				_ => {}
+			}
+			// kill();
+		}
+		Trap::Exception(Exception::IllegalInstruction) => {
+			println!("[kernel] IllegalInstruction in application, kernel killed it.");
+		}
+		Trap::Interrupt(Interrupt::SupervisorTimer) => {
+			set_next_trigger();
+			// sys_yield();
+		}
+		_ => {
+			let mut pcb=thread.proc.inner.lock();
+			let cx: &mut TrapFrame = pcb
+				.trapframe_ppn
+				.get_mut();
+			panic!(
+				"Unsupported trap {:?}, stval = {:#x},spec = {:#x},pid = {}",
+				scause.cause(),
+				stval,
+				cx.sepc,
+				pcb.pid
+			);
+		}
     }
 }
 
