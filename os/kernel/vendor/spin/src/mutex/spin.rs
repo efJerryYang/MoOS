@@ -14,7 +14,6 @@ use core::{
     mem::ManuallyDrop,
     ops::{Deref, DerefMut},
 };
-use std::println;
 
 /// A [spin lock](https://en.m.wikipedia.org/wiki/Spinlock) providing mutually exclusive access to data.
 ///
