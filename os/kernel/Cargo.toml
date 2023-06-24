@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 xmas-elf = "0.9.0"
 riscv = { path = "dependencies/riscv", features = ["inline-asm"] }
-virtio-drivers = { path = "dependencies/virtio-drivers" }
 bitflags = "1.2.1"
 buddy_system_allocator = "0.6"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
@@ -19,3 +18,4 @@ hashbrown = "0.13.2"
 async-task = { path = "dependencies/async-task", default-features = false }
 tempfile = "3.5.0"
 embedded-sdmmc = "0.5.0"
+virtio-drivers = "0.5.0"

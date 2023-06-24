@@ -1,7 +1,9 @@
 extern crate alloc;
+extern crate virtio_drivers;
 
 pub mod dev;
 pub mod dirty;
+pub mod driver;
 pub mod file;
 pub mod util;
 pub mod vfs;
