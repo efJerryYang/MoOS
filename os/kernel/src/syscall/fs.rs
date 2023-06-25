@@ -7,7 +7,7 @@ use core::{
     slice,
 };
 
-use crate::{console::print, mm::{page_table::copy_out, MemorySet, memory_set}, task::Thread};
+use crate::{console::print, mm::{page_table::{copy_out, translate_str}, MemorySet, memory_set}, task::Thread};
 use alloc::{
     format,
     string::{String, ToString},
@@ -58,8 +58,9 @@ impl Thread{
 		(cwd_str.len() + 1) as isize
 	}
 	// int openat(int dirfd,const char *path, int flags)
-	pub fn sys_openat(&self,dirfd: isize, path: &str, flags: isize) -> isize {
+	pub fn sys_openat(&self,dirfd: isize, path: usize, flags: isize) -> isize {
 		let mut task=self.proc.inner.lock();
+		let path = &translate_str(task.memory_set.token(),path as *mut u8);
 		// println!("openat: dir fd: {}, path: {}, flags: {}", dirfd, path, flags);
 		let start_dir_path;
 		let rel_path;
@@ -385,10 +386,11 @@ impl Thread{
 	}
 
 
-	pub fn sys_mkdirat(&self, fd: isize, path: &str, mode: usize) -> isize {
+	pub fn sys_mkdirat(&self, fd: isize, path: usize, mode: usize) -> isize {
 		let fd = fd as usize;
 		let mode = mode as u16;
 		let mut task = self.proc.inner.lock();
+		let path=&translate_str(task.memory_set.token(), path as *mut u8);
 		let mut fd_manager = &mut task.fd_manager;
 
 		if fd >= fd_manager.len() {
@@ -445,8 +447,9 @@ impl Thread{
 
 	// SYSCALL_CHDIR => sys_chdir(&translate_str(get_token(), args[0] as *mut u8)),
 
-	pub fn sys_chdir(&self, path: &str) -> isize {
+	pub fn sys_chdir(&self, path: usize) -> isize {
 		let mut task = self.proc.inner.lock();
+		let path=&translate_str(task.memory_set.token(), path as *mut u8);
 		let mut fd_manager = &task.fd_manager;
 
 		let mut path_iter = path.split('/');
@@ -516,9 +519,10 @@ impl Thread{
 
 	// SYSCALL_UNLINKAT => sys_unlinkat(args[0] as isize, &translate_str(get_token(), args[1] as *mut u8), args[2] as usize),
 
-	pub fn sys_unlinkat(&self, fd: isize, path: &str, flags: usize) -> isize {
+	pub fn sys_unlinkat(&self, fd: isize, path: usize, flags: usize) -> isize {
 		// println!("sys_unlinkat: fd: {}, path: {}, flags: {}", fd, path, flags);
 		let mut task = self.proc.inner.lock();
+		let path=&translate_str(self.proc.inner.lock().memory_set.token(), path as *mut u8);
 		let mut fd_manager = &mut task.fd_manager;
 
 		if fd >= fd_manager.len() as isize {

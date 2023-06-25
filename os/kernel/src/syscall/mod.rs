@@ -71,6 +71,7 @@ pub struct timespec {
 
 impl Thread{
 	pub fn translate(& self,ptr: usize) -> usize {
+		unsafe{self.proc.inner.force_unlock();};
 		PageTable::from_token(self.proc.inner.lock().memory_set.token())
 			.translate_va(VirtAddr::from(ptr as usize))
 			.unwrap()
@@ -82,9 +83,9 @@ impl Thread{
 			SYSCALL_WRITE => self.sys_write(args[0], args[1] as *const u8, args[2]),
 			SYSCALL_EXIT =>  self.sys_exit(args[0] as i32),
 			SYSCALL_NANOSLEEP => Thread::sys_nanosleep(
-				self.translate(args[0]) as *mut timespec,
-				self.translate(args[1]) as *mut timespec,
-			),
+				self.translate(args[0]),
+				self.translate(args[1]),
+			).await,
 			SYSCALL_READ => self.sys_read(args[0] as usize, args[1], args[2]).await,
 			SYSCALL_SCHED_YIELD => {Thread::async_yield().await;0},
 			SYSCALL_GETTIMEOFDAY => self.sys_gettimeofday(args[0] as *mut usize),
@@ -107,7 +108,7 @@ impl Thread{
 			SYSCALL_BRK => self.sys_brk(args[0]),
 			SYSCALL_OPENAT => self.sys_openat(
 				args[0] as isize,
-				&translate_str(self.proc.inner.lock().memory_set.token(),args[1] as *mut u8),
+				args[1],
 				args[2] as isize,
 			),
 			SYSCALL_CLOSE => self.sys_close(args[0] as isize),
@@ -121,14 +122,14 @@ impl Thread{
 			SYSCALL_DUP3 => self.sys_dup3(args[0] as isize, args[1] as isize, args[2] as isize),
 			SYSCALL_MKDIRAT => self.sys_mkdirat(
 				args[0] as isize,
-				&translate_str(self.proc.inner.lock().memory_set.token(), args[1] as *mut u8),
+				args[1],
 				args[2] as usize,
 			),
-			SYSCALL_CHDIR => self.sys_chdir(&translate_str(self.proc.inner.lock().memory_set.token(), args[0] as *mut u8)),
+			SYSCALL_CHDIR => self.sys_chdir(args[0]),
 			SYSCALL_FSTAT => self.sys_fstat(args[0] as isize, args[1] as *mut u8),
 			SYSCALL_UNLINKAT => self.sys_unlinkat(
 				args[0] as isize,
-				&translate_str(self.proc.inner.lock().memory_set.token(), args[1] as *mut u8),
+				args[1],
 				args[2] as usize,
 			),
 			SYSCALL_UNAME => Thread::sys_uname(self.translate(args[0]) as *mut u8),

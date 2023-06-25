@@ -16,23 +16,24 @@ use super::{task_list, ProcessContext, ProcessState, __switch, PCB, TASK_QUEUE, 
 impl Thread{
 
 pub unsafe fn exec_from_elf(&self ,elf_file: &ElfFile, argv: usize) -> isize {
-    let (user_pagetable, mut user_stack, entry) = MemorySet::from_elf(&elf_file);
+	let (user_pagetable, mut user_stack, entry) = MemorySet::from_elf(&elf_file);
     let mut nowproc = &mut self.proc.inner.lock();
-    nowproc.trapframe_ppn = user_pagetable
-        .translate(VirtAddr::from(TRAPFRAME).into())
-        .unwrap()
-        .ppn();
+	nowproc.trapframe_ppn = user_pagetable
+		.translate(VirtAddr::from(TRAPFRAME).into())
+		.unwrap()
+		.ppn();
 
-    let mut user_stack_kernel: usize = PageTable::from_token(user_pagetable.token())
-        .translate_va(VirtAddr::from(user_stack - 8))
-        .unwrap()
-        .get_mut() as *mut u8 as usize
-        + 8;
+	let mut user_stack_kernel: usize = PageTable::from_token(user_pagetable.token())
+		.translate_va(VirtAddr::from(user_stack - 8))
+		.unwrap()
+		.get_mut() as *mut u8 as usize
+		+ 8;
 
-    let mut argc = 0;
-    let mut pos: Vec<usize> = Vec::new();
+		let mut argc = 0;
+		let mut pos: Vec<usize> = Vec::new();
     if (argv != 0) {
         loop {
+			print!("!");
             let argv_i_ptr = *(self.translate(argv + argc * 8) as *mut usize);
             if (argv_i_ptr == 0) {
                 break;
@@ -43,7 +44,7 @@ pub unsafe fn exec_from_elf(&self ,elf_file: &ElfFile, argv: usize) -> isize {
             let src = s.as_bytes();
             user_stack_kernel -= s.len();
             user_stack -= s.len();
-
+			
             let dst = core::slice::from_raw_parts_mut((user_stack_kernel) as *mut u8, s.len());
             dst.copy_from_slice(src);
             pos.push(user_stack);

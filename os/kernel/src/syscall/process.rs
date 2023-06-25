@@ -83,20 +83,19 @@ impl Thread{
 			(TRAMPOLINE - KERNEL_STACK_SIZE * new_pid).into(),
 			MapPermission::R | MapPermission::W,
 		);
-
 		if (stack != 0) {
 			(*(pcb.trapframe_ppn.get_mut() as *mut TrapFrame)).x[2] = stack;
 		}
-
+		
 		new_pcb.context = pcb.context;
 		new_pcb.context.ra = user_loop as usize;
 		new_pcb.context.sp = TRAMPOLINE - KERNEL_STACK_SIZE * new_pid;
 		new_pcb.state = ProcessState::READY;
 		new_pcb.pid = new_pid;
-
+		
 		let new_proc=Arc::new(Process::new(new_pcb));
 		pcb.children.alive.insert(new_pid, new_proc.clone());
-
+		
 		let (r,t)=async_task::spawn(user_loop(Arc::new(Thread::new(new_proc.clone()))), |runnable|{TASK_QUEUE.push(runnable);});
 		r.schedule();
 		t.detach();
@@ -138,7 +137,6 @@ impl Thread{
 	}
 
 	pub async unsafe fn sys_waitpid(&self, pid: isize, status:UserPtr<isize,Out>, options: usize) -> isize {
-		println!("WAIT_PID");
 		let mut pcb_lock=self.proc.inner.lock();
 		let mut pcb=pcb_lock.deref_mut();
 		let nowpid = pcb.pid;

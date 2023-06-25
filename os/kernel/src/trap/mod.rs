@@ -51,7 +51,7 @@ pub async unsafe fn user_loop(thread: Arc<Thread>){
 		
 		let trapframe_ptr = TRAPFRAME;
 		pcb.memory_set.token()
-		};
+	};
 
 	extern "C" {
 		fn __alltraps();

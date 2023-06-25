@@ -67,11 +67,17 @@ impl Thread{
 		*(t.add(1)) = ts % 1000000;
 		return 0;
 	}
-	pub unsafe fn sys_nanosleep(req: *mut timespec, rem: *mut timespec) -> isize {
-		let st = get_time_us();
-		let ed = st + (*req).tv_sec * 1000000 + (*req).tv_nsec;
+	pub async unsafe fn sys_nanosleep(req: usize, rem: usize) -> isize {
+		let ed={
+			let req=req as *mut timespec;
+			let rem=rem as *mut timespec;
+			let st = get_time_us();
+			let ed = st + (*req).tv_sec * 1000000 + (*req).tv_nsec;
+			ed
+		};
+
 		while get_time_us() < ed {
-			Thread::async_yield();
+			Thread::async_yield().await;
 		}
 		return 0;
 	}

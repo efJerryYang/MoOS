@@ -138,9 +138,10 @@ unsafe fn load_user_file() {
         init_end as usize - init_start as usize,
     ));
 	loop{
-		println!("<{}>",TASK_QUEUE.len());
+		// println!("<{}>",TASK_QUEUE.len());
 		let runnable: Runnable=TASK_QUEUE.fetch();
 		runnable.run();
+		// println!(">{}<",TASK_QUEUE.len());
 	}
 }
 
