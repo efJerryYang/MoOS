@@ -10,3 +10,4 @@ makefile_stdout_stderr.txt
 os_serial_out.txt
 result.txt
 **/userbin_gen
+sdcard.img
