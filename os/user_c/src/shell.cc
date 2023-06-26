@@ -13,7 +13,7 @@ char buf[256];
 
 signed main() {
 	// printf("%s",ss);
-	argv[0] = "arg0";
+	argv[0] = "busybox";
 	argv[1] = "arg1";
 	argv[2] = "arg2";
 	argv[3] = "arg3";
@@ -46,7 +46,7 @@ signed main() {
 		}
 		int pid = fork();
 		if(pid == 0) {
-			execve(buf, 0, 0);
+			execve(buf, argv, 0);
 		} else {
 			int status;
 			wait(&status);

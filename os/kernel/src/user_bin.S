@@ -2,7 +2,7 @@
 	.section .data
 	.globl _app_num
 _app_num:
-	.quad 38
+	.quad 39
 	.quad init_start
 	.quad shell_start
 	.quad forktest_start
@@ -41,7 +41,8 @@ _app_num:
 	.quad pipe_start
 	.quad mmap_start
 	.quad munmap_start
-	.quad munmap_end
+	.quad busybox_start
+	.quad busybox_end
 
 	.globl _app_names
 _app_names:
@@ -83,6 +84,7 @@ _app_names:
 	.string "pipe"
 	.string "mmap"
 	.string "munmap"
+	.string "busybox"
 
 	.section .data
 	.global init_start
@@ -354,4 +356,11 @@ mmap_end:
 munmap_start:
 	.incbin "../testbin/munmap"
 munmap_end:
+
+	.global busybox_start
+	.global busybox_end
+	.align 3
+busybox_start:
+	.incbin "../testbin/busybox"
+busybox_end:
 

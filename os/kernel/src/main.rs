@@ -132,16 +132,20 @@ unsafe fn load_user_file() {
         fn init_end();
 		fn forktest_start();
         fn forktest_end();
+		fn busybox_start();
+        fn busybox_end();
     }
+    // crate_task_from_elf(slice::from_raw_parts(
+    //     busybox_start as *const u8,
+    //     busybox_end as usize - init_start as usize,
+    // ));
     crate_task_from_elf(slice::from_raw_parts(
         init_start as *const u8,
         init_end as usize - init_start as usize,
     ));
 	loop{
-		// println!("<{}>",TASK_QUEUE.len());
 		let runnable: Runnable=TASK_QUEUE.fetch();
 		runnable.run();
-		// println!(">{}<",TASK_QUEUE.len());
 	}
 }
 
@@ -162,9 +166,9 @@ pub fn rust_main() -> ! {
 		println!("  / /| /| |/ __ \\/ /  / /\\___ \\");
 		println!(" / / |/ | / /_/ / /__/ /____/ /");
 		println!("/_/     |_\\____/\\_____/______/");
-    println!("");
-    trap::init();
-    mm::init();
+		println!("");
+		trap::init();
+		mm::init();
     // unsafe {sie::set_stimer();}
     // set_next_trigger();
     unsafe {

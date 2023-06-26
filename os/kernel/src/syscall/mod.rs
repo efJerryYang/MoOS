@@ -33,6 +33,10 @@ const SYSCALL_UNAME: usize = 160;
 const SYSCALL_GETTIMEOFDAY: usize = 169;
 const SYSCALL_GETPID: usize = 172;
 const SYSCALL_GETPPID: usize = 173;
+const SYSCALL_GETUID: usize = 174;
+const SYSCALL_GETEUID: usize = 175;
+const SYSCALL_GETGID: usize = 176;
+const SYSCALL_GETEGID: usize = 177;
 const SYSCALL_BRK: usize = 214;
 const SYSCALL_MUNMAP: usize = 215;
 const SYSCALL_CLONE: usize = 220;
@@ -145,6 +149,10 @@ impl Thread{
 			SYSCALL_PIPE2 => {
 				self.sys_pipe2(self.translate(args[0]) as *mut u32)
 			}
+			SYSCALL_GETEUID => 0,
+			SYSCALL_GETUID => 0,
+			SYSCALL_GETGID => 0,
+			SYSCALL_GETEGID => 0,
 			_ => panic!("Unsupported syscall_id: {}", syscall_id),
 		};
 		result
