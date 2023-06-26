@@ -26,6 +26,17 @@ qemu: all
 	-drive file=sdcard.img,format=raw,if=virtio
     # -device loader,file=kernel-qemu,addr=0x80200000
 
+single: all
+	qemu-system-riscv64 \
+    -machine virt \
+    -nographic \
+	-smp 1 \
+	-m 128 \
+    -bios sbi-qemu \
+	-kernel kernel-qemu \
+	-drive file=sdcard.img,format=raw,if=none,id=x0\
+    -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+
 local: all
 	qemu-system-riscv64 \
 	-machine virt \

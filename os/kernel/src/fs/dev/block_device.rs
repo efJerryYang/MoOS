@@ -9,12 +9,3 @@ pub trait BlockDevice: Send + Sync + Any {
 }
 
 use embedded_sdmmc::{Mode, SdCard, VolumeManager};
-
-use riscv::addr::Frame;
-use spin::Mutex;
-
-use virtio_drivers::{
-    device::blk::VirtIOBlk,
-    Hal,
-    transport::{mmio::MmioTransport, DeviceType},
-};
