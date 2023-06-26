@@ -7,6 +7,9 @@ signed main(){
 		execve("busybox", 0, 0);
 		// execve("shell", 0, 0);
 		// execve("runtest", 0, 0);
+		// execve("shell", 0, 0);
+		// execve("runtest", 0, 0);
+		// execve("mount", 0, 0);
 	}else{
 		for(;;){
 			int status;
