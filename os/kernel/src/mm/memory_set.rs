@@ -183,6 +183,7 @@ impl MemorySet {
                 }
                 let map_area = MapArea::new(start_va, end_va, MapType::Framed, map_perm);
                 max_end_vpn = map_area.vpn_range.get_end();
+				println!("loadding:{:#x} to {:#x}.",start_va.0,end_va.0);
                 memory_set.push(
                     map_area,
                     Some(&elf.input[ph.offset() as usize..(ph.offset() + ph.file_size()) as usize]),
@@ -204,6 +205,8 @@ impl MemorySet {
             ),
             None,
         );
+		println!("user_stack_top:{:#x}",user_stack_top);
+		println!("user_stack_btm:{:#x}",user_stack_bottom);
         // used in sbrk
         memory_set.push(
             MapArea::new(

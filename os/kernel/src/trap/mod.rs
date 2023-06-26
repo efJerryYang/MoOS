@@ -39,19 +39,20 @@ pub fn trap_from_kernel() {
 pub async unsafe fn user_loop(thread: Arc<Thread>){
 	{
 	let mut pcb=thread.proc.inner.lock();
-	println!("[New Thread] pid={},spec={:#x}",pcb.pid,(*(pcb.trapframe_ppn.get_mut() as *mut TrapFrame)).sepc);
+	println!("[New Thread] pid={},spec={:#x},sp={:#x}",pcb.pid,(*(pcb.trapframe_ppn.get_mut() as *mut TrapFrame)).sepc,(*(pcb.trapframe_ppn.get_mut() as *mut TrapFrame)).x[2]);
 	}
 	
 	loop{
 		let user_satp={
-		let mut pcb=thread.proc.inner.lock();
-		stvec::write(TRAMPOLINE as usize, TrapMode::Direct);
-		pcb.ktime +=get_time_ms() - pcb.otime;
-		pcb.otime = get_time_ms();
-		
-		let trapframe_ptr = TRAPFRAME;
-		pcb.memory_set.token()
-	};
+			let mut pcb=thread.proc.inner.lock();
+			// println!("spec={:#x}",(*(pcb.trapframe_ppn.get_mut() as *mut TrapFrame)).sepc);
+			stvec::write(TRAMPOLINE as usize, TrapMode::Direct);
+			pcb.ktime +=get_time_ms() - pcb.otime;
+			pcb.otime = get_time_ms();
+			
+			let trapframe_ptr = TRAPFRAME;
+			pcb.memory_set.token()
+		};
 
 	extern "C" {
 		fn __alltraps();
@@ -60,12 +61,12 @@ pub async unsafe fn user_loop(thread: Arc<Thread>){
 	let restore_va = __restore as usize - __alltraps as usize + TRAMPOLINE;
 	let mut cx=ProcessContext::new();
 	asm!(
-        "fence.i",
-        "jalr {restore_va}",             // jump to new addr of __restore asm function
-        restore_va = in(reg) restore_va,
-        in("a0") &mut cx,      // a0 = virt addr of Trap Context
-        in("a1") user_satp,        // a1 = phy addr of usr page table
-    );
+		"fence.i",
+		"jalr {restore_va}",             // jump to new addr of __restore asm function
+		restore_va = in(reg) restore_va,
+		in("a0") &mut cx,      // a0 = virt addr of Trap Context
+		in("a1") user_satp,        // a1 = phy addr of usr page table
+	);
 	let mut pcb=thread.proc.inner.lock();
 	stvec::write(trap_from_kernel as usize, TrapMode::Direct);
 	let scause = scause::read(); // get trap cause
@@ -120,6 +121,7 @@ pub async unsafe fn user_loop(thread: Arc<Thread>){
 				}
 				_ => {}
 			}
+			panic!("pg ft.");
 			// kill();
 		}
 		Trap::Exception(Exception::IllegalInstruction) => {

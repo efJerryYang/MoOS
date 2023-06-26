@@ -31,12 +31,13 @@ pub unsafe fn exec_from_elf(&self ,elf_file: &ElfFile, argv: usize) -> isize {
 
 		let mut argc = 0;
 		let mut pos: Vec<usize> = Vec::new();
-    if (argv != 0) {
-        loop {
-			print!("!");
+
+		
+		if (argv != 0) {
+			loop {
             let argv_i_ptr = *(self.translate(argv + argc * 8) as *mut usize);
             if (argv_i_ptr == 0) {
-                break;
+				break;
             }
             let argv_i = argv_i_ptr as *mut u8;
             let mut s = translate_str(nowproc.memory_set.token(), argv_i);
@@ -51,19 +52,37 @@ pub unsafe fn exec_from_elf(&self ,elf_file: &ElfFile, argv: usize) -> isize {
             argc += 1;
         }
     }
+	
+	//env
+	user_stack_kernel -= 8;
+	user_stack -= 8;
+	*(user_stack_kernel as *mut usize)=0;
+	pos.push(user_stack);
+	argc+=1;
+	//augvec
+	user_stack_kernel -= 8;
+	user_stack -= 8;
+	*(user_stack_kernel as *mut usize)=0;
+	pos.push(user_stack);
+	argc+=1;
+
 
     for i in 0..argc {
-        user_stack_kernel -= 8;
+		user_stack_kernel -= 8;
         user_stack -= 8;
-        *(user_stack_kernel as *mut usize) = pos[argc - i - 1];
+        *(user_stack_kernel as *mut usize) = pos[argc - i -1 ];
+		println!(":::{:#x}",pos[argc-i-1]);
     }
-
+	argc-=2;
+	
     user_stack_kernel -= 8;
     user_stack -= 8;
     *(user_stack_kernel as *mut usize) = argc;
-
+	println!("argc:{}",argc);
+	println!("usert_stack:{:#x}",user_stack);
+	
     *(nowproc.trapframe_ppn.get_mut() as *mut TrapFrame) = TrapFrame::app_init_context(
-        entry,
+		entry,
         user_stack,
         KERNEL_SPACE.exclusive_access().token(),
         TRAMPOLINE - KERNEL_STACK_SIZE * nowproc.pid,

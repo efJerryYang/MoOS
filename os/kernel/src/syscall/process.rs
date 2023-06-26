@@ -84,7 +84,7 @@ impl Thread{
 			MapPermission::R | MapPermission::W,
 		);
 		if (stack != 0) {
-			(*(pcb.trapframe_ppn.get_mut() as *mut TrapFrame)).x[2] = stack;
+			(*(new_pcb.trapframe_ppn.get_mut() as *mut TrapFrame)).x[2] = stack;
 		}
 		
 		new_pcb.context = pcb.context;

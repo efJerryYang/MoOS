@@ -521,8 +521,8 @@ impl Thread{
 
 	pub fn sys_unlinkat(&self, fd: isize, path: usize, flags: usize) -> isize {
 		// println!("sys_unlinkat: fd: {}, path: {}, flags: {}", fd, path, flags);
+		let path={&translate_str(self.proc.inner.lock().memory_set.token(), path as *mut u8)};
 		let mut task = self.proc.inner.lock();
-		let path=&translate_str(self.proc.inner.lock().memory_set.token(), path as *mut u8);
 		let mut fd_manager = &mut task.fd_manager;
 
 		if fd >= fd_manager.len() as isize {
