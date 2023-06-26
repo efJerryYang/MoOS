@@ -39,6 +39,7 @@ use core::{
     fmt,
     ops::{Deref, DerefMut},
 };
+use std::println;
 
 #[cfg(all(not(feature = "spin_mutex"), not(feature = "use_ticket_mutex")))]
 compile_error!("The `mutex` feature flag was used (perhaps through another feature?) without either `spin_mutex` or `use_ticket_mutex`. One of these is required.");
@@ -182,6 +183,7 @@ impl<T: ?Sized, R: RelaxStrategy> Mutex<T, R> {
     /// ```
     #[inline(always)]
     pub fn lock(&self) -> MutexGuard<T> {
+		println!("lock!");
         MutexGuard {
             inner: self.inner.lock(),
         }

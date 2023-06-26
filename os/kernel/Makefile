@@ -31,7 +31,7 @@ run: userbin binary
     -nographic \
 	-m 128\
     -bios ../../bootloader/rustsbi-qemu.bin \
-    -device loader,file=$(TARGET_DIR)/os.bin,addr=0x80200000
+    -device loader,file=$(TARGET_DIR)/os.bin,addr=0x80200000\
 
 debug: build binary
 	qemu-system-riscv64 \

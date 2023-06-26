@@ -33,6 +33,7 @@ mod task;
 pub mod syscall;
 pub mod timer;
 pub mod trap;
+use crate::fs::block_dev::block_device_test;
 use crate::mm::memory_set::{MapArea, MapPermission, MapType};
 use crate::mm::VirtAddr;
 use crate::task::{TASK_QUEUE, Thread, PID_ALLOCATOR, Process};
@@ -171,6 +172,8 @@ pub fn rust_main() -> ! {
 		mm::init();
     // unsafe {sie::set_stimer();}
     // set_next_trigger();
+	block_device_test();
+	panic!("success.");
     unsafe {
         load_user_file();
     }

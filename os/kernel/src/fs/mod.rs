@@ -5,6 +5,7 @@ pub mod dirty;
 pub mod file;
 pub mod util;
 pub mod vfs;
+pub mod block_dev;
 
 use vfs::INode;
 
