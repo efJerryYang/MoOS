@@ -22,7 +22,8 @@ qemu: all
 	-smp 2 \
 	-m 128 \
     -bios sbi-qemu \
-	-kernel kernel-qemu
+	-kernel kernel-qemu \
+	-drive file=sdcard.img,format=raw,if=virtio
     # -device loader,file=kernel-qemu,addr=0x80200000
 
 local: all
