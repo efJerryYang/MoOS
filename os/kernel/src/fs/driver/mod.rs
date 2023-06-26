@@ -1,6 +1,7 @@
 #[cfg(feature = "board_qemu")]
 type BlockDeviceImpl = virtio_blk::VirtIOBlock;
 
+extern crate virtio_drivers;
 
 
 lazy_static! {
