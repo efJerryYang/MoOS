@@ -17,12 +17,12 @@ asm:all
 
 qemu: all
 	qemu-system-riscv64 \
-    -machine virt \
-    -nographic \
-	-smp 2 \
-	-m 128 \
-    -bios sbi-qemu \
+	-machine virt \
 	-kernel kernel-qemu \
+	-m 128M \
+	-nographic \
+	-smp 2 \
+	-bios sbi-qemu \
 	-drive file=sdcard.img,if=none,format=raw,id=x0  \
 	-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
 	-device virtio-net-device,netdev=net \
@@ -69,15 +69,15 @@ sdebug: all
     -bios sbi-qemu \
 	-kernel kernel-qemu \
 	-gdb tcp::12345 -S \
-	-drive file=sdcard.img,format=raw,if=none,id=x0 \
+	-drive file=sdcard.img2,format=raw,if=none,id=x0 \
 	-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
 gdb:
 	riscv64-unknown-elf-gdb \
-    -ex 'file /home/max/os/naive-os/os/testbin/busybox_unstripped' \
+    -ex 'file /home/max/os/naive-os/debug/testbin/busybox_unstripped' \
     -ex 'set arch riscv:rv64' \
     -ex 'target remote localhost:12345'
 
-    # -ex 'file /home/max/os/naive-os/os/testbin/lua' \
-    # -ex 'file /home/max/os/naive-os/os/testbin/busybox_unstripped' \
+    # -ex 'file /home/max/os/naive-os/debug/lua' \
+	# -ex 'file /home/max/os/naive-os/sdcardmnt/time-test' \
 	# -ex 'file /home/max/os/naive-os/os/kernel/target/riscv64gc-unknown-none-elf/release/os' \

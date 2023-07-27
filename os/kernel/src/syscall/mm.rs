@@ -25,6 +25,9 @@ impl Thread{
 		if (end_ == _brk) {
 			0
 		} else if (end_ < _brk) {
+			if PRINT_SYSCALL{
+				println!("[brk] {:#x} to {:#x}",end_,_brk);
+			}
 			pcb.memory_set.push(
 				MapArea::new(
 					end_.into(),
@@ -33,6 +36,14 @@ impl Thread{
 					MapPermission::R | MapPermission::W | MapPermission::U,
 				),None);
 			pcb.heap_pos.0 = _brk;
+
+			// for area in &pcb.memory_set.areas{
+			// 	println!("[{:#x},{:#x}]",
+			// 		area.vpn_range.get_start().0*0x1000,
+			// 		&area.vpn_range.get_end().0*0x1000
+			// 	)
+			// }
+			
 			return _brk as isize;
 		} else {
 			panic!("shrink.");
@@ -80,7 +91,7 @@ impl Thread{
 				return startva as isize;
 			}
 			// let len=len.max(PAGE_SIZE);
-			println!("{:#x},{:#x},",startva,startva+len);
+			// println!("{:#x},{:#x},",startva,startva+len);
 			pcb.memory_set.push(
 				MapArea::new(
 					startva.into(),

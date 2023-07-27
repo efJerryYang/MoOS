@@ -13,6 +13,7 @@ use alloc::format;
 use alloc::string::{ToString, String};
 use async_task::Runnable;
 use lazy_static::{lazy_static, __Deref};
+use riscv::register::sstatus::{self, FS};
 use spin::Mutex;
 use spin::mutex::SpinMutex;
 use sync::UPSafeCell;
@@ -37,11 +38,11 @@ mod task;
 pub mod syscall;
 pub mod timer;
 pub mod trap;
-use crate::fs::block_dev::{block_device_test, init_block_dev};
+use crate::fs::block_dev::{init_block_dev};
 use crate::fs::file::{RegFileINode, OpenFlags};
 use crate::mm::memory_set::{MapArea, MapPermission, MapType};
 use crate::mm::VirtAddr;
-use crate::task::{TASK_QUEUE, Thread, PID_ALLOCATOR, Process, global_dentry_cache};
+use crate::task::{TASK_QUEUE, Thread, PID_ALLOCATOR, Process, GLOBAL_DENTRY_CACHE};
 use crate::trap::{user_loop, set_kernel_trap};
 use crate::{
     config::{KERNEL_STACK_SIZE, TRAMPOLINE, USER_STACK_SIZE},
@@ -134,7 +135,7 @@ pub fn insert_file(path:&str,name:&str,content:&[u8]){
             content,
 		);
 		let inode=Arc::new(Mutex::new(inode));
-		global_dentry_cache.insert(format!("{}/{}",path,name).as_str(),inode);
+		GLOBAL_DENTRY_CACHE.insert(format!("{}/{}",path,name).as_str(),inode);
 	}
 }
 
@@ -204,6 +205,12 @@ macro_rules! smp_v {
     };
 }
 
+fn init_fp(){
+    unsafe{
+        sstatus::set_fs(FS::Clean);
+    }
+}
+
 
 #[no_mangle]
 pub fn rust_main(hart_id:usize) -> ! {
@@ -220,8 +227,10 @@ pub fn rust_main(hart_id:usize) -> ! {
 		println!("/_/     |_\\____/\\_____/______/");
 		println!("");
 		clear_bss();
+        init_fp();
 		mm::init();
 		trap::init();
+		KERNEL_SPACE.lock().activate();
 		init_block_dev();
 		// unsafe {sie::set_stimer();}
 		Thread::sys_mount();
@@ -230,10 +239,11 @@ pub fn rust_main(hart_id:usize) -> ! {
 	}else{
 		smp_v!(INIT_START => true);
 		println!("hart {} booting.",hart_id);
-		KERNEL_SPACE.lock().activate();
-		trap::init();
+		// trap::init();
         loop{}
 	}
+    println!("Mount Success.");
+    println!("Entering Loop.");
 	//enter userloop
 	loop{
 		if let Some(runnable)=TASK_QUEUE.fetch(){

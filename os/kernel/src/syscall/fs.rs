@@ -26,7 +26,7 @@ use crate::{
     mm::translated_byte_buffer,
     sbi::console_getchar,
     task::{
-        global_buffer_list, global_dentry_cache, global_open_file_table,
+        GLOBAL_DENTRY_CACHE,
         FdManager, FileDescriptor, OpenFile,
     },
 };
@@ -104,7 +104,7 @@ impl Thread{
 		let abs_path=format!("{}{}",start_dir_path,rel_path);
 		if PRINT_SYSCALL {println!("[openat] path={},fd={}",abs_path,task.fd_manager.len());}
 		
-		let fd=match global_dentry_cache.get(&abs_path) {
+		let fd=match GLOBAL_DENTRY_CACHE.get(&abs_path) {
 			Some(inode) => {
 				let open_file=Arc::new(Mutex::new(OpenFile::new_from_inode(
 					((flags as u32 ^ OpenFlags::RDONLY.bits())
@@ -131,7 +131,7 @@ impl Thread{
 					flags: OpenFlags::new(flags as u32),
 					file: Vec::new(),
 				}));
-				global_dentry_cache.insert(&abs_path, new_inode.clone());
+				GLOBAL_DENTRY_CACHE.insert(&abs_path, new_inode.clone());
 				task.fd_manager.push(Arc::new(Mutex::new(OpenFile::new_from_inode(
 					((flags as u32 ^ OpenFlags::RDONLY.bits())
 					| (flags as u32 ^ OpenFlags::RDWR.bits()))
@@ -264,7 +264,9 @@ impl Thread{
 					let (name,len)=item.get_lfn().unwrap();
 					let name=core::str::from_utf8(&name).unwrap().to_string();
 					lfn_name=format!("{}{}",&name[..len],lfn_name);
+					// println!("<{}>:end:{}",lfn_name,item.is_name_end().unwrap());
 					drop(name);
+					// if !item.is_name_end().unwrap() { continue; }
 					let file=dir.open_file(&lfn_name);
 					let mut file_path=path.clone();
 					file_path.push_str(&lfn_name);
@@ -293,7 +295,7 @@ impl Thread{
 								println!("empty file.");
 							}
 						}
-						global_dentry_cache.insert(&file_path, inode);
+						GLOBAL_DENTRY_CACHE.insert(&file_path, inode);
 						
 						// let buf=inode_content;
 						// let mut nxx=0;
@@ -310,23 +312,33 @@ impl Thread{
 									// 		break;
 									// 	}
 									// }	
+						lfn_name=String::new();
+					}else{
+						//DIRc
+						let new_dir=dir.cd(&lfn_name);
+						if let Ok(new_dir)=new_dir{
+							let mut new_path=path.clone();
+							new_path.push_str(&lfn_name);
+							new_path.push('/');
+							Thread::full_search_mount(new_dir,new_path);
+							lfn_name=String::new();
+						}else{
+							// continue;
+							// panic!("Mount Exception.");
+							if !item.is_name_end().unwrap(){
 								lfn_name=String::new();
-								}else{
-									//DIRc
-									let new_dir=dir.cd(&lfn_name);
-									if let Ok(new_dir)=new_dir{
-										let mut new_path=path.clone();
-										new_path.push_str(&lfn_name);
-										new_path.push('/');
-										Thread::full_search_mount(new_dir,new_path);
-									}else{
-										continue;
-										// continue;
-										// panic!("Mount Exception.");
-									}
-								}
+							}else{
+								println!("failed on {}",&lfn_name);
 							}
+						}
+					}
+				}
 				ItemType::Dir=>{
+				}
+				ItemType::File=>{
+					let x=item.sfn.unwrap().name;
+					let x=core::str::from_utf8(&x).unwrap().to_string();
+					// println!("[mount] sfn {}",&x);
 				}
 				_=>{
 					;
@@ -340,17 +352,6 @@ impl Thread{
 		let root_dir=volume.root_dir();
 		Thread::full_search_mount(root_dir,"/".to_string());
 		return 0;
-		let nuclear = include_bytes!("../../../testbin/text.txt");
-		let inode = Arc::new(Mutex::new(RegFileINode::new(
-			"/".to_string(),
-			"text.txt".to_string(),
-			OpenFlags::CREATE,
-			true,
-			true,
-		)));
-		inode.lock().file = nuclear.to_vec();
-		global_dentry_cache.insert("/text.txt", inode);
-		0
 	}
 
 	pub async unsafe fn sys_read(&self,fd: usize, buf: usize, len: usize) -> isize {
@@ -616,7 +617,7 @@ impl Thread{
 		let (dir,rel)=self.get_abs_path(path);
 		let abs_path=format!("{}{}",dir,rel);
 		if PRINT_SYSCALL{println!("[fstatat] dirfd:{}, abs_path:{}",dirfd as isize,abs_path);}
-		let inode=global_dentry_cache.get(&abs_path);
+		let inode=GLOBAL_DENTRY_CACHE.get(&abs_path);
 		if inode.is_none() {
 			return -1;
 		}
@@ -731,7 +732,7 @@ impl Thread{
 		// ); // TODO: fix incorrect start_dir_path
 		let abs_path = format!("{}{}", start_dir_path, rel_path);
 
-		global_dentry_cache.unlink(&abs_path);
+		GLOBAL_DENTRY_CACHE.unlink(&abs_path);
 		// println!("unlinkat: abs_path: {}", abs_path);
 
 		0
