@@ -23,7 +23,10 @@ qemu: all
 	-m 128 \
     -bios sbi-qemu \
 	-kernel kernel-qemu \
-	-drive file=sdcard.img,format=raw,if=virtio
+	-drive file=sdcard.img,if=none,format=raw,id=x0  \
+	-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
+	-device virtio-net-device,netdev=net \
+	-netdev user,id=net
     # -device loader,file=kernel-qemu,addr=0x80200000
 
 single: all
@@ -65,13 +68,16 @@ sdebug: all
 	-m 128 \
     -bios sbi-qemu \
 	-kernel kernel-qemu \
-	-gdb tcp::12345 -S
+	-gdb tcp::12345 -S \
+	-drive file=sdcard.img,format=raw,if=none,id=x0 \
+	-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
 gdb:
 	riscv64-unknown-elf-gdb \
-    -ex 'file /home/max/os/naive-os/os/testbin/busybox_debug' \
+    -ex 'file /home/max/os/naive-os/os/testbin/busybox_unstripped' \
     -ex 'set arch riscv:rv64' \
     -ex 'target remote localhost:12345'
 
+    # -ex 'file /home/max/os/naive-os/os/testbin/lua' \
     # -ex 'file /home/max/os/naive-os/os/testbin/busybox_unstripped' \
 	# -ex 'file /home/max/os/naive-os/os/kernel/target/riscv64gc-unknown-none-elf/release/os' \

@@ -1,7 +1,7 @@
 use crate::{
     console::print,
     fs::vfs::{INode, Metadata, Result, Timespec},
-    sbi::console_getchar,
+    sbi::console_getchar, config::PRINT_SYSCALL,
 };
 use _core::{any::Any, cmp::min};
 use alloc::{
@@ -123,6 +123,26 @@ impl RegFileINode {
             file: Vec::new(),
         }
     }
+	pub fn new_from_existed(
+        dir: String,
+        name: String,
+        flags: OpenFlags,
+        readable: bool,
+        writable: bool,
+		file: &[u8],
+    ) -> Self {
+        RegFileINode {
+            readable,
+            writable,
+            dir,
+            name,
+            atime: Timespec::default(),
+            mtime: Timespec::default(),
+            ctime: Timespec::default(),
+            flags,
+            file: file.to_vec(),
+        }
+    }
 }
 
 impl INode for RegFileINode {
@@ -130,20 +150,14 @@ impl INode for RegFileINode {
         if !self.readable {
             return Err(FsError::InvalidParam);
         }
+        
         let file = &self.file[offset..];
-        let len = buf.len();
-        let mut pos = 0;
-        for b in file {
-            if pos < len {
-                buf[pos] = *b;
-                pos += 1;
-            } else {
-                // buffer overflow
-                println!("[Reg Read] buffer overflow.");
-                return Ok(pos);
-            }
-        }
-        return Ok(pos);
+        let len =min(buf.len(),file.len());
+        
+        buf[..len].copy_from_slice(&file[..len]);
+        // if PRINT_SYSCALL{println!("[file read] len={},[{}]",file.len(),core::str::from_utf8(&buf[..len]).unwrap().to_string())};
+        if PRINT_SYSCALL{println!("[file read] {}",&self.name);}
+        return Ok(len);
     }
     fn write_at(&mut self, offset: usize, buf: &[u8]) -> Result<usize> {
         if !self.writable {
@@ -244,7 +258,7 @@ impl INode for TerminalINode {
     fn write_at(&mut self, _offset: usize, buf: &[u8]) -> Result<usize> {
         if !self.writable {
             return Err(FsError::InvalidParam);
-        }
+		}
 
         let len = terminal_write(buf)?;
 
@@ -272,6 +286,94 @@ impl INode for TerminalINode {
         return "null".to_string();
     }
 
+    fn is_pipe(&self) -> bool {
+        return false;
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DentryInode {
+    pub readable: bool,
+    pub writable: bool,
+    pub dir: String,
+    pub name: String,
+    // Time related
+    pub atime: Timespec,
+    pub mtime: Timespec,
+    pub ctime: Timespec,
+    // Open mode
+    pub flags: OpenFlags,
+    // File data
+    pub file: Vec<u8>,
+}
+impl DentryInode {
+    pub fn new(
+        dir: String,
+        name: String,
+        flags: OpenFlags,
+        readable: bool,
+        writable: bool,
+    ) -> Self {
+        DentryInode {
+            readable,
+            writable,
+            dir,
+            name,
+            atime: Timespec::default(),
+            mtime: Timespec::default(),
+            ctime: Timespec::default(),
+            flags,
+            file: Vec::new(),
+        }
+    }
+	pub fn new_from_existed(
+        dir: String,
+        name: String,
+        flags: OpenFlags,
+        readable: bool,
+        writable: bool,
+		file: &[u8],
+    ) -> Self {
+        DentryInode {
+            readable,
+            writable,
+            dir,
+            name,
+            atime: Timespec::default(),
+            mtime: Timespec::default(),
+            ctime: Timespec::default(),
+            flags,
+            file: file.to_vec(),
+        }
+    }
+}
+
+impl INode for DentryInode {
+    fn read_at(&mut self, offset: usize, buf: &mut [u8]) -> Result<usize> {
+        return Err(FsError::InvalidParam);
+    }
+    fn write_at(&mut self, offset: usize, buf: &[u8]) -> Result<usize> {
+        return Err(FsError::InvalidParam);
+    }
+    fn poll(&self) -> Result<super::vfs::PollStatus> {
+        return Ok(PollStatus::default());
+    }
+    fn as_any_ref(&self) -> &dyn _core::any::Any {
+        return &1;
+    }
+    fn file_size(&self) -> usize {
+        return self.file.len();
+    }
+    fn file_data(&mut self) -> &mut Vec<u8> {
+        return &mut self.file;
+    }
+    fn unlink(&mut self, _name: &str) -> Result<()> {
+        self.name = "null".to_string();
+        return Ok(());
+    }
+    fn file_name(&self) -> String {
+        return self.name.clone();
+    }
     fn is_pipe(&self) -> bool {
         return false;
     }
@@ -327,14 +429,14 @@ impl Stat {
         Self {
             st_dev: 1,
             st_ino: 1,
-            st_mode: 1,
+            st_mode: 32768,
             st_nlink: 1,
-            st_uid: 0x11223344,
-            st_gid: 0x55667788,
+            st_uid: 0,
+            st_gid: 0,
             st_rdev: 0xaabbccdd11223344,
-            st_size: 0x2333,
-            st_blksize: 0x11111111,
-            st_blocks: 0x2222222222222222,
+            st_size: 0,
+            st_blksize: 512,
+            st_blocks: 1,
             st_atime_sec: Timespec::default().sec as u64,
             st_atime_nsec: Timespec::default().nsec as u64,
             st_mtime_sec: Timespec::default().sec as u64,
@@ -365,23 +467,27 @@ impl PipeINode {
 
 impl INode for PipeINode {
     fn read_at(&mut self, _offset: usize, buf: &mut [u8]) -> Result<usize> {
-        // println!("this read");
-        let pipe_buf: &Vec<u8> = &self.buf;
-        let size: usize = min(pipe_buf.len() - self.st, buf.len());
-        for i in 0..size {
-            buf[i] = pipe_buf[i + self.st];
+        if _offset> self.buf.len() {return Ok(0);}
+
+        let pipe_buf = &self.buf[_offset..];
+        let size: usize = min(pipe_buf.len(), buf.len());
+        buf[..size].copy_from_slice(&pipe_buf[..size]);
+        if PRINT_SYSCALL{
+            println!("[pipe read]");
+            println!("[{}]",core::str::from_utf8(&buf[..size]).unwrap());
         }
-        // println!("[{}]",core::str::from_utf8(pipe_buf).unwrap());
-        self.st += size;
         Ok(size)
     }
 
     fn write_at(&mut self, _offset: usize, buf: &[u8]) -> Result<usize> {
-        // println!("this write");
         let pipe_buf = &mut self.buf;
         let size = buf.len();
         for i in 0..size {
             pipe_buf.push(buf[i]);
+        }
+        if PRINT_SYSCALL{
+            println!("[pipe write]");
+            println!("[{}]",core::str::from_utf8(buf).unwrap());
         }
         Ok(size)
     }
