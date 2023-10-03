@@ -1,58 +1,57 @@
-![hitsz-logo](docs/hitsz-logo.jpg)
-
-![pre-2023_leaderboard](docs/pre-2023_leaderboard.png)
+<!-- ![hitsz-logo](docs/hitsz-logo.jpg) -->
+<!-- ![pre-2023_leaderboard](docs/pre-2023_leaderboard.png) -->
 
 # MoOS
 
-## 概述
+[English](./README.md) | [中文](./README_zh.md)
 
-MoOS 是一个在 RISC-V 处理器架构上运行的简单内核，主要由 Rust 语言实现。项目目前仍处于开发阶段，初赛期间的开发旨在为团队成员提供一个学习操作系统架构和 Rust 语言的渠道，故所在分支命名为 naive-os。该内核由一系列通用操作系统的模块化组件构成，如内存管理、任务调度和文件系统等。
+## Overview
 
-MoOS 并未采用无栈异步架构，虽然它是今年许多队伍的重点，但无栈协程在操作系统内核开发上尚未广泛应用，仍属于新颖尝试。我们倾向于遵循 Rust 微内核操作系统 Redox 的设计理念，利用 Rust 的所有权和生命周期机制降低内存相关漏洞，通过微内核设计增强系统安全性，并利用 Scheme 机制减少不必要的上下文切换。
+MoOS is a simple kernel designed to run on the RISC-V processor architecture, primarily implemented in Rust. The project is still under development. During the preliminary phase, our main goal was to provide a platform for team members to learn about OS architecture and the Rust language, hence the branch being named `naive-os`. This kernel is made up of modular components commonly found in operating systems, such as memory management, task scheduling, and filesystems.
 
-不过受限于团队成员初次从头开始编写操作系统内核对细节的掌握情况，我们在初赛阶段 naive-os 分支的开发中没有实际应用到 Scheme 的设计，但我们有信心在接下来的两个月中完成我们的重构任务和开发，以构建出更加模块化、轻量级和安全的操作系统内核。
+MoOS has not adopted a stackless asynchronous architecture. While it's a focus for many teams this year, stackless coroutines are still a novelty in OS kernel development. 
 
-初赛阶段文档可从 [MoOS-初赛文档](./MoOS-初赛文档.pdf) 查看。
+The preliminary phase documentation can be viewed [here](./MoOS-初赛文档.pdf).
 
-## 基础模块
+## Basic Modules
 
-MoOS 的基础模块包括以下几个部分，主要为启动相关：
+MoOS's basic modules primarily concern booting:
 
-- `main.rs`: 系统的入口点，负责初始化操作系统中的各个部分，然后开始用户程序的执行。
-- `config.rs`: 定义了一些全局常量，如用户栈大小、内核栈大小、内核堆大小和内存末尾地址等，为内核的运行提供配置。
-- `sbi.rs`: MoOS 的内核能与底层硬件进行交互的 Rust SBI 的封装。
-- `timer.rs`: 提供定时器相关的功能。
-- `entry.asm`: 系统的汇编语言入口点，设置了初始的栈指针，然后跳转到 rust_main 函数。
-<!-- - `lang_items.rs`: 提供了 Rust 的一些语言项，例如 panic 处理函数。 -->
+- `main.rs`: The system's entry point, responsible for initializing various parts of the OS and then launching user program execution.
+- `config.rs`: Defines global constants, such as user stack size, kernel stack size, kernel heap size, and the end address of memory.
+- `sbi.rs`: A Rust SBI wrapper allowing the MoOS kernel to interact with the underlying hardware.
+- `timer.rs`: Provides timer-related functionalities.
+- `entry.asm`: The assembly language entry point of the system, sets the initial stack pointer and then jumps to the `rust_main` function.
+<!-- - `lang_items.rs`: Offers some Rust language items, e.g., panic handling function. -->
 
-## 功能模块
+## Functional Modules
 
-MoOS 的功能模块则主要包括以如下三部分，即进程管理、内存管理和文件系统管理：
+The functional modules of MoOS primarily consist of process management, memory management, and filesystem management:
 
-- `task/`: 这是进程管理模块，负责创建、销毁、调度、中断、唤醒等进程相关的功能。
-- `mm/`: 这是内存管理模块，负责虚拟内存和物理内存的管理，包括内存分配、页表管理以及地址转换。
-- `fs/`: 这是文件系统模块，实现了一个虚拟文件系统，能够通过各级抽象统一调用接口，自管理缓存实现内存与外设的高速准确交互。
+- `task/`: This is the process management module, handling functionalities related to process creation, destruction, scheduling, interruption, and awakening.
+- `mm/`: This is the memory management module, overseeing virtual and physical memory, including memory allocation, page table management, and address conversion.
+- `fs/`: This is the filesystem module, implementing a virtual filesystem with a unified interface, managing its cache for efficient and accurate interaction with devices.
 
-我们也提供另外的模块为上述内容提供基础，包括 `sync/` 和 `trap/` 模块。
+We also offer additional modules, such as `sync/` and `trap/`:
 
-- `sync/`: 包含同步原语，如原子操作和互斥体。
-- `trap/`: 负责处理硬件陷阱，如时钟中断和系统调用。
+- `sync/`: Contains synchronization primitives, like atomic operations and mutexes.
+- `trap/`: Handles hardware traps, such as clock interrupts and system calls.
 
-## 用户态程序
+## User Programs
 
-我们提供了基本的用户态程序，即 `shell`。它可以接收用户的命令，并通过系统调用与内核交互，执行相应的操作。
+We provide a basic user program, the `shell`. It can receive user commands and interact with the kernel via system calls to execute respective operations.
 
-- `syscall.rs`: 实现了 MoOS 的系统调用，遵循 Unix 规范，提供了一系列标准的接口，如文件操作、进程控制、信号处理等，它是内核与用户态程序之间的桥梁。
+- `syscall.rs`: Implements the MoOS system calls following Unix standards, offering a series of standard interfaces like file operations, process control, signal handling, etc. It serves as a bridge between the kernel and user programs.
 
-此外，MoOS 还包含了一些其他的模块，如 `console.rs` (负责控制台输入/输出)，以及 `boards/qemu.rs` (针对 QEMU 虚拟机的硬件配置和初始化代码)。
+Additionally, MoOS includes other modules like `console.rs` (handling console input/output) and `boards/qemu.rs` (for QEMU virtual machine hardware configuration and initialization).
 
-## 开发状态
+## Development Status
 
-目前 MoOS 还处于实验阶段，尚存在大量的开发和性能提升空间。我们的前期工作将作为一个基础框架，支持后续的优化和系统调用的进一步实现。
+MoOS is currently experimental, with much room for further development and performance improvement. Our initial work serves as a foundational framework for subsequent optimizations and further system call implementations.
 
-## 代码仓库
+## Code Repository
 
-初赛阶段的代码在 GitLab 仓库的 `naive-os` 分支可见，当前为默认分支。
+The preliminary phase code can be found on the GitLab repository's `naive-os` branch, which is the current default branch.
 
 ```sh
 git clone https://gitlab.eduxiji.net/202318123101332/OSKernel2023-MoOS.git
@@ -60,102 +59,10 @@ cd OSKernel2023-MoOS
 git checkout naive-os
 ```
 
-## 开发及运行环境
+## Development and Running Environment
 
-硬件环境: QEMU emulator version 7.0.0
+Hardware Requirement: QEMU emulator version 7.0.0
 
-## 参考资料
+## References
 
-开发过程中，我们引用和借鉴了 rCore-Tutorial 相关代码，以实现进程管理和内存管理相关部分；我们引用了 rcore-fs 仓库的 vfs 相关内容并根据我们的需要进行了修改，并独立完成实际所需文件结构和方法的编写。
-
-<!-- # Dependencies
-
-    sudo apt install g++-11-riscv64-linux-gnu
-
-This is for user program compiling.
-
-# Run on QEMU:
-
-    cd os
-    make all
-
-### HINTS:
-
-Bulid kernel and run:
-
-    make run
-
-Compile user programs:
-
-    make user
-
-# Progress:
-
-## supported system calls:
-
-```C
-int read(int fd, char* buf, int len);//STDIN only
-int write(int fd, const char* buf, int len);//STDOUT only
-int exit(int code);
-int waitpid(int pid,int* stauts,int options);//options not implemented
-int getpid(void);
-int getppid(void);
-int sched_yield(void);
-int clone(int flag,void* stack);
-int execve(char* path,char** argv,char** env);//env not implemented
-int gettimeofday(*timespec ts,int ts);
-int nanosleep(const *timespec req,*timespec rem);//rem not implemented
-```
-
-## passed tests
-```C
-	"getpid",
-	"getppid",
-	"write",
-	"gettimeofday",
-	"sleep",
-	"wait",
-	"waitpid",
-	"exit",
-	"execve",
-	"test_echo",
-	"fork",
-	"times",
-	"yield",
-	"clone",
-	"yield",
-```
-
-# yet to do:
-
-### File system
-
-```c
-#define SYS_openat 56
-#define SYS_close 57
-#define SYS_getcwd 17
-#define SYS_getdents64 61 ?
-#define SYS_read 63
-#define SYS_write 64
-#define SYS_mkdirat 34 ?
-#define SYS_fstat 80
-```
-
-### Process
-
-```c
-```
-
-### Memory
-
-```c
-#define SYS_brk 214
-#define SYS_munmap 215
-#define SYS_mmap 222
-```
-
-### Tests
-``` C
-	"times",
-	...
-``` -->
+During development, we referenced and adapted code from rCore-Tutorial, mainly for process and memory management. We borrowed content related to vfs from the rcore-fs repository, making necessary modifications and completing the required file structures and methods independently.
